@@ -79,7 +79,6 @@ KaSyntheticJavaPropertySymbol:
       annotations: []
       callableId: null
       contextReceivers: []
-      generatedPrimaryConstructorProperty: null
       hasDeclaredDefaultValue: false
       hasDefaultValue: false
       isActual: false
@@ -97,6 +96,7 @@ KaSyntheticJavaPropertySymbol:
       modality: FINAL
       name: x
       origin: JAVA_SOURCE
+      primaryConstructorProperty: null
       receiverParameter: null
       returnType: KaUsualClassType:
         annotations: []
@@ -118,7 +118,6 @@ KaSyntheticJavaPropertySymbol:
         annotations: []
         callableId: null
         contextReceivers: []
-        generatedPrimaryConstructorProperty: null
         hasDeclaredDefaultValue: false
         hasDefaultValue: false
         isActual: false
@@ -136,6 +135,7 @@ KaSyntheticJavaPropertySymbol:
         modality: FINAL
         name: x
         origin: JAVA_SOURCE
+        primaryConstructorProperty: null
         receiverParameter: null
         returnType: KaUsualClassType:
           annotations: []
