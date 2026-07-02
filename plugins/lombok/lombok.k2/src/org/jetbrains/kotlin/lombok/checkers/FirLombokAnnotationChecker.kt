@@ -36,7 +36,7 @@ object FirLombokAnnotationChecker : FirBasicDeclarationChecker(MppCheckerKind.Co
 
     private val implementedAnnotationInfos: Map<ClassId, ImplementedAnnotationsInfo> = buildMap {
         val logInfo = ImplementedAnnotationsInfo(
-            setOf(
+            allowedTargetsMap = setOf(
                 KotlinTarget.CLASS_ONLY,
                 KotlinTarget.OBJECT,
                 KotlinTarget.ENUM_CLASS,
@@ -64,13 +64,13 @@ object FirLombokAnnotationChecker : FirBasicDeclarationChecker(MppCheckerKind.Co
             )
         )
         this[LombokNames.TO_STRING_INCLUDE_ID] = ImplementedAnnotationsInfo(
-            setOf(
+            allowedTargetsMap = setOf(
                 KotlinTarget.PROPERTY,
                 //KotlinTarget.FUNCTION, TODO: support later because Lombok also allows it on functions, KT-86021
             )
         )
         this[LombokNames.TO_STRING_EXCLUDE_ID] = ImplementedAnnotationsInfo(
-            setOf(
+            allowedTargetsMap = setOf(
                 KotlinTarget.PROPERTY,
             )
         )
@@ -108,7 +108,7 @@ object FirLombokAnnotationChecker : FirBasicDeclarationChecker(MppCheckerKind.Co
             )
         )
         this[LombokNames.EQUALS_AND_HASH_CODE_EXCLUDE_ID] = ImplementedAnnotationsInfo(
-            setOf(
+            allowedTargetsMap = setOf(
                 KotlinTarget.PROPERTY,
             )
         )
@@ -136,7 +136,7 @@ object FirLombokAnnotationChecker : FirBasicDeclarationChecker(MppCheckerKind.Co
                     }
                 }
 
-                for ((argumentName = key, argumentExpression = value) in annotation.argumentMapping.mapping) {
+                for ([argumentName, argumentExpression] in annotation.argumentMapping.mapping) {
                     if (unsupportedArguments.contains(argumentName)) {
                         reporter.reportOn(
                             argumentExpression.source,
