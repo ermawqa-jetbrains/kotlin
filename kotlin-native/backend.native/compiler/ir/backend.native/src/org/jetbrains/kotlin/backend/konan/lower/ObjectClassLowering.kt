@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.backend.konan.descriptors.synthesizedName
 import org.jetbrains.kotlin.backend.konan.ir.buildSimpleAnnotation
 import org.jetbrains.kotlin.backend.konan.ir.isUnit
+import org.jetbrains.kotlin.backend.konan.ir.konanLibrary
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
@@ -22,6 +23,7 @@ import org.jetbrains.kotlin.ir.irAttribute
 import org.jetbrains.kotlin.ir.objcinterop.*
 import org.jetbrains.kotlin.ir.types.isAny
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.library.newCompanionInitializationEnabled
 import org.jetbrains.kotlin.utils.addToStdlib.getOrSetIfNull
 
 private var IrClass.objectClassInstanceFunction: IrSimpleFunction? by irAttribute(copyByDefault = false)
@@ -110,7 +112,16 @@ internal class ObjectClassLowering(val generationState: NativeGenerationState) :
     ) {
         val function = context.getObjectClassInstanceFunction(declaration)
         val property = function.correspondingPropertySymbol!!.owner
-        classToAdd.declarations.add(property)
+        val index = if (classToAdd.konanLibrary?.newCompanionInitializationEnabled == true) {
+            classToAdd.declarations.indexOf(declaration)
+        } else {
+            -1
+        }
+        if (index == -1) {
+            classToAdd.declarations.add(property)
+        } else {
+            classToAdd.declarations.add(index, property)
+        }
 
         property.addBackingField {
             isFinal = true
