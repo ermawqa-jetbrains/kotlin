@@ -194,7 +194,6 @@ KaSyntheticJavaPropertySymbol:
   modality: OPEN
   name: length
   origin: JAVA_SYNTHETIC_PROPERTY
-  primaryConstructorParameter: null
   receiverParameter: null
   returnType: KaUsualClassType:
     annotations: []

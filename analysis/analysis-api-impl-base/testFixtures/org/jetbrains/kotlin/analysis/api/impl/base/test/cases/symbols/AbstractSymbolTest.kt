@@ -209,9 +209,9 @@ abstract class AbstractSymbolTest : AbstractAnalysisApiBasedTest() {
          * even if the backing PSI was dropped for the containing symbol.
          * Without dropping the backing PSI again, some checks will never pass.
          *
-         * E.g., if the backing PSI was dropped for some [KaPropertySymbol], its [KaPropertySymbol.primaryConstructorParameter]
+         * E.g., if the backing PSI was dropped for some [KaPropertySymbol], its [KaKotlinPropertySymbol.primaryConstructorParameter]
          * will still have the backing PSI that was restored from the FIR.
-         * So check like `KaPropertySymbol == KaPropertySymbol.primaryConstructorParameter.generatedPrimaryConstructorProperty`
+         * So check like `KaPropertySymbol == KaKotlinPropertySymbol.primaryConstructorParameter.generatedPrimaryConstructorProperty`
          * will always fail for nonPsi version as the symbol on the RHS will have some restored PSI, while the LHS symbol has it dropped.
          */
         fun <S : KaSymbol> S.dropPsiIfNeeded(): S = also { if (disablePsiBasedLogic) it.dropBackingPsi() }
@@ -225,7 +225,7 @@ abstract class AbstractSymbolTest : AbstractAnalysisApiBasedTest() {
                     }
                 }
             }
-            is KaPropertySymbol -> {
+            is KaKotlinPropertySymbol -> {
                 val parameterSymbol = symbol.primaryConstructorParameter
                 if (parameterSymbol != null) {
                     check(parameterSymbol.generatedPrimaryConstructorProperty?.dropPsiIfNeeded() == symbol) {
