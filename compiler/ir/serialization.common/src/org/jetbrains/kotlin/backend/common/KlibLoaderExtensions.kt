@@ -51,7 +51,8 @@ fun KlibLoaderResult.eliminateLibrariesWithDuplicatedUniqueNames(configuration: 
                 SerializationErrors.KLIB_LOADING_ERROR,
                 message +
                         "\nPlease file an issue to https://kotl.in/issue and meanwhile use CLI parameter -Xklib-duplicated-unique-name-strategy with one of the following values:\n" +
-                        "${DuplicatedUniqueNameStrategy.ALLOW_ALL_WITH_WARNING}: Use all KLIB dependencies, even when they have same 'unique_name' property.\n" +
+                        "${DuplicatedUniqueNameStrategy.ALLOW_ALL}: Use all KLIB dependencies, even when they have same 'unique_name' property.\n" +
+                        "${DuplicatedUniqueNameStrategy.ALLOW_ALL_WITH_WARNING}: Use all KLIB dependencies, even when they have same 'unique_name' property, but emit a warning.\n" +
                         "${DuplicatedUniqueNameStrategy.ALLOW_FIRST_WITH_WARNING}: Use the first KLIB dependency with clashing 'unique_name' property. No order guarantees are given though.\n" +
                         "${DuplicatedUniqueNameStrategy.DENY}: Fail a compilation with the error."
             )
