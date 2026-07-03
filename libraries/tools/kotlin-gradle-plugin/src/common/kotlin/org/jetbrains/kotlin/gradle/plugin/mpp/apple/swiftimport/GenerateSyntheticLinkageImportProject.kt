@@ -34,10 +34,10 @@ import kotlin.collections.mapNotNull
 internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), UsesBuildFusService {
 
     @get:Input
-    protected abstract val directlyImportedDependencies: SetProperty<SwiftPMDependency>
+    protected abstract val directSwiftPMDependencies: SetProperty<SwiftPMDependency>
 
     @get:Input
-    abstract val dependencyIdentifierToImportedSwiftPMDependencies: Property<TransitiveSwiftPMDependencies>
+    abstract val transitiveSwiftPMMetadata: Property<TransitiveSwiftPMMetadata>
 
     @get:Internal
     val syntheticImportProjectRoot: DirectoryProperty = project.objects.directoryProperty().convention(
@@ -109,7 +109,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
         macosDeploymentVersion.set(swiftPMImportExtension.macosMinimumDeploymentTarget)
         watchosDeploymentVersion.set(swiftPMImportExtension.watchosMinimumDeploymentTarget)
         tvosDeploymentVersion.set(swiftPMImportExtension.tvosMinimumDeploymentTarget)
-        directlyImportedDependencies.set(swiftPMImportExtension.swiftPMDependencies)
+        directSwiftPMDependencies.set(swiftPMImportExtension.swiftPMDependencies)
     }
 
     /**
@@ -117,7 +117,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
      * `dependencyIdentifierToImportedSwiftPMDependencies`.
      */
     fun useOnlyTransitiveImportedDependencies() {
-        directlyImportedDependencies.set(emptySet())
+        directSwiftPMDependencies.set(emptySet())
     }
 
     @TaskAction
@@ -125,7 +125,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
         buildFusService.orNull?.reportFusMetrics {
             it.report(
                 BooleanMetrics.KMP_SWIFT_PM_IMPORT_HAS_TRANSITIVE_DEPENDENCIES_FROM_MODULAR_DEPENDENCIES,
-                dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.keys.any { it.isModular }
+                transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.keys.any { it.isModular }
             )
         }
 
@@ -199,8 +199,8 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
                         identifier = SYNTHETIC_IMPORT_DYLIB,
                         packageRoot = packageRoot.resolve("${SUBPACKAGES}/${SYNTHETIC_IMPORT_DYLIB}"),
                         syntheticProductType = SyntheticProductType.DYNAMIC,
-                        directlyImportedSwiftPMDependencies = directlyImportedDependencies.get(),
-                        transitiveSyntheticPackages = dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.keys,
+                        directlyImportedSwiftPMDependencies = directSwiftPMDependencies.get(),
+                        transitiveSyntheticPackages = transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.keys,
                         transitiveSyntheticPackagesPath = "..",
                         binaryTarget = null,
                     )
@@ -209,7 +209,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
                         packageRoot = packageRoot,
                         syntheticProductType = SyntheticProductType.INFERRED,
                         // Leave only version constraints - SwiftPM doesn't pick it up from subproject dependency when product is not consumed explicitly from the package
-                        directlyImportedSwiftPMDependencies = directlyImportedDependencies.get().mapNotNull {
+                        directlyImportedSwiftPMDependencies = directSwiftPMDependencies.get().mapNotNull {
                             val remoteDependency = when (it) {
                                 is SwiftPMDependency.Local -> return@mapNotNull null
                                 is SwiftPMDependency.Remote -> it
@@ -226,14 +226,14 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
                         identifier = packageIdentifier.get(),
                         packageRoot = packageRoot,
                         syntheticProductType = SyntheticProductType.INFERRED,
-                        directlyImportedSwiftPMDependencies = directlyImportedDependencies.get(),
-                        transitiveSyntheticPackages = dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.keys,
+                        directlyImportedSwiftPMDependencies = directSwiftPMDependencies.get(),
+                        transitiveSyntheticPackages = transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.keys,
                         transitiveSyntheticPackagesPath = SUBPACKAGES,
                         binaryTarget = binaryTarget,
                     )
                 }
             }
-            dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.forEach { (dependencyIdentifier, swiftPMDependencies) ->
+            transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.forEach { (dependencyIdentifier, swiftPMDependencies) ->
                 generatePackageManifest(
                     identifier = dependencyIdentifier.identifier,
                     packageRoot = packageRoot.resolve("${SUBPACKAGES}/${dependencyIdentifier.identifier}"),
@@ -359,7 +359,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
                     val deploymentTarget = explicitOrMaximumDeploymentTarget(
                         macosDeploymentVersion,
                         MACOS_DEPLOYMENT_TARGET_DEFAULT,
-                        dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.values.mapNotNull { it.macosDeploymentVersion },
+                        transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.values.mapNotNull { it.macosDeploymentVersion },
                     )
                     ".macOS(\"${deploymentTarget}\")"
                 }
@@ -367,7 +367,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
                     val deploymentTarget = explicitOrMaximumDeploymentTarget(
                         iosDeploymentVersion,
                         IOS_DEPLOYMENT_TARGET_DEFAULT,
-                        dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.values.mapNotNull { it.iosDeploymentVersion },
+                        transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.values.mapNotNull { it.iosDeploymentVersion },
                     )
                     ".iOS(\"${deploymentTarget}\")"
                 }
@@ -375,7 +375,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
                     val deploymentTarget = explicitOrMaximumDeploymentTarget(
                         tvosDeploymentVersion,
                         TVOS_DEPLOYMENT_TARGET_DEFAULT,
-                        dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.values.mapNotNull { it.tvosDeploymentVersion },
+                        transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.values.mapNotNull { it.tvosDeploymentVersion },
                     )
                     ".tvOS(\"${deploymentTarget}\")"
                 }
@@ -383,7 +383,7 @@ internal abstract class GenerateSyntheticLinkageImportProject : DefaultTask(), U
                     val deploymentTarget = explicitOrMaximumDeploymentTarget(
                         watchosDeploymentVersion,
                         WATCHOS_DEPLOYMENT_TARGET_DEFAULT,
-                        dependencyIdentifierToImportedSwiftPMDependencies.get().metadataByDependencyIdentifier.values.mapNotNull { it.watchosDeploymentVersion },
+                        transitiveSwiftPMMetadata.get().metadataByDependencyIdentifier.values.mapNotNull { it.watchosDeploymentVersion },
                     )
                     ".watchOS(\"${deploymentTarget}\")"
                 }

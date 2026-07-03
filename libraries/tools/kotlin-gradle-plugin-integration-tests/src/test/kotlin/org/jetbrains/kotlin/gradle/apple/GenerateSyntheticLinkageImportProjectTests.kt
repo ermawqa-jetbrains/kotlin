@@ -20,7 +20,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.GenerateSyntheti
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependency
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependencyIdentifier
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMImportMetadata
-import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.TransitiveSwiftPMDependencies
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.TransitiveSwiftPMMetadata
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.locateOrRegisterSwiftPMDependenciesExtension
 import org.jetbrains.kotlin.gradle.testbase.*
 import org.jetbrains.kotlin.gradle.testing.prettyPrinted
@@ -62,7 +62,7 @@ class GenerateSyntheticLinkageImportProjectTests : KGPBaseTest() {
                 project.tasks.register<GenerateSyntheticLinkageImportProject>("packageGeneration") {
                     configureWithExtension(extension)
                     konanTargets.set(setOf(KonanTarget.IOS_ARM64))
-                    dependencyIdentifierToImportedSwiftPMDependencies.set(TransitiveSwiftPMDependencies(emptyMap()))
+                    transitiveSwiftPMMetadata.set(TransitiveSwiftPMMetadata(emptyMap()))
                     syntheticProductType.set(SyntheticProductType.INFERRED)
                 }
             }
@@ -139,8 +139,8 @@ class GenerateSyntheticLinkageImportProjectTests : KGPBaseTest() {
                 project.tasks.register<GenerateSyntheticLinkageImportProject>("packageGeneration") {
                     configureWithExtension(extension)
                     konanTargets.set(setOf(KonanTarget.IOS_ARM64))
-                    dependencyIdentifierToImportedSwiftPMDependencies.set(
-                        TransitiveSwiftPMDependencies(
+                    transitiveSwiftPMMetadata.set(
+                        TransitiveSwiftPMMetadata(
                             mapOf(
                                 SwiftPMDependencyIdentifier("dep", true) to SwiftPMImportMetadata(
                                     konanTargets = setOf("ios_arm64"),

@@ -23,7 +23,7 @@ internal interface SwiftResolveWorkParameters : WorkParameters {
     val gitIgnoreCheckoutDir: Property<Boolean>
     val coordinationService: Property<SwiftImportFingerprintedCoordinationService>
     val syntheticPackageHash: Property<String>
-    val markCompletion: Property<Boolean>
+    val isCoordinationEnabled: Property<Boolean>
     val syntheticLockFile: RegularFileProperty
     val workspaceStateJson: RegularFileProperty
     val ideaSyncEnabled: Property<Boolean>
@@ -43,7 +43,7 @@ internal abstract class SwiftResolveWorkAction @Inject constructor(
         errorFile.delete()
         try {
             doExecute()
-            if (parameters.markCompletion.get()) {
+            if (parameters.isCoordinationEnabled.get()) {
                 finalizeFetchTask(
                     fs,
                     parameters.syntheticImportProjectRoot.get().asFile.resolve("Package.resolved"),
@@ -55,7 +55,7 @@ internal abstract class SwiftResolveWorkAction @Inject constructor(
                     .markSwiftResolveCompleted(parameters.syntheticPackageHash.get())
             }
         } catch (failure: Throwable) {
-            if (parameters.markCompletion.get()) {
+            if (parameters.isCoordinationEnabled.get()) {
                 parameters.coordinationService.get()
                     .markSwiftResolveFailed(parameters.syntheticPackageHash.get(), failure)
             }

@@ -19,8 +19,6 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.util.GradleVersion
 import org.gradle.work.DisableCachingByDefault
-import org.jetbrains.kotlin.gradle.dsl.multiplatformExtension
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.locateOrRegisterTask
 import org.jetbrains.kotlin.gradle.tasks.locateTask
 import org.jetbrains.kotlin.konan.target.HostManager
@@ -30,7 +28,7 @@ import java.io.Serializable
 
 internal fun Project.locateOrRegisterSwiftPMDependenciesMetadataTaskForLockFilesAndConsumableConfiguration(
     swiftPMImportExtension: SwiftPMImportExtension,
-    transitiveDependencies: Provider<TransitiveSwiftPMDependencies>,
+    transitiveDependencies: Provider<TransitiveSwiftPMMetadata>,
     konanTarget: KonanTarget,
 ): TaskProvider<SerializeSwiftPMDependenciesMetadataForLockFiles> {
     val existingTask =
@@ -42,7 +40,7 @@ internal fun Project.locateOrRegisterSwiftPMDependenciesMetadataTaskForLockFiles
         it.enabled = HostManager.hostIsMac
         it.configureWithExtension(swiftPMImportExtension)
         it.dependsOn(transitiveDependencies)
-        it.transitiveSwiftPMDependencies.set(transitiveDependencies)
+        it.transitiveSwiftPMMetadata.set(transitiveDependencies)
         it.konanTargets.add(konanTarget)
     }
     registerSwiftPMDependenciesMetadataForLockFilesApiElements(swiftPMDependenciesMetadata)
@@ -57,7 +55,7 @@ internal data class SwiftPMImportMetadataForLockFiles(
     val watchosDeploymentVersion: String?,
     val tvosDeploymentVersion: String?,
     val directDependencies: Set<SwiftPMDependency>,
-    val transitiveDependencies: TransitiveSwiftPMDependencies,
+    val transitiveDependencies: TransitiveSwiftPMMetadata,
 ) : Serializable
 
 @DisableCachingByDefault(because = "This task does lightweight serialization that is not worth caching")
@@ -92,11 +90,11 @@ internal abstract class SerializeSwiftPMDependenciesMetadataForLockFiles : Defau
     internal val metadataFile: Provider<RegularFile> = project.layout.buildDirectory.file("kotlin/swiftPMDependenciesMetadataForLockFiles")
 
     @get:Internal
-    abstract val transitiveSwiftPMDependencies: Property<TransitiveSwiftPMDependencies>
+    abstract val transitiveSwiftPMMetadata: Property<TransitiveSwiftPMMetadata>
 
     @get:Input
     protected val fingerprint = if (GradleVersion.current().baseVersion >= GradleVersion.version("8.0")) {
-        transitiveSwiftPMDependencies
+        transitiveSwiftPMMetadata
     } else {
         project.provider { 0 }
     }
@@ -124,7 +122,7 @@ internal abstract class SerializeSwiftPMDependenciesMetadataForLockFiles : Defau
                         watchosDeploymentVersion = watchosDeploymentVersion.orNull,
                         tvosDeploymentVersion = tvosDeploymentVersion.orNull,
                         directDependencies = importedSpmModules.get().toSet(),
-                        transitiveDependencies = transitiveSwiftPMDependencies.get(),
+                        transitiveDependencies = transitiveSwiftPMMetadata.get(),
                         projectPath = projectPath,
                     )
                 )

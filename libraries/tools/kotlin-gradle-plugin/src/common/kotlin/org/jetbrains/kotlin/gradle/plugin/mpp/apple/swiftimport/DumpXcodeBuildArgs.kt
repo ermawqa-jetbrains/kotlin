@@ -115,19 +115,20 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
      * up-to-date and the next regular build retries. Mirrors CInteropProcess.errorFileProvider.
      */
     @get:OutputFile
-    val swiftPMImportError: Provider<RegularFile> = syntheticImportDd.map {
+    val ideImportError: Provider<RegularFile> = syntheticImportDd.map {
         it.file("DumpXcodebuild_error.out")
     }
 
     init {
         // KT-85468: while the error marker exists the task is not up-to-date so the next build retries.
-        outputs.upToDateWhen { !swiftPMImportError.get().asFile.exists() }
+        outputs.upToDateWhen { !ideImportError.get().asFile.exists() }
     }
 
     @TaskAction
     fun dumpXcodeBuildArgs() {
-        val errorFile = swiftPMImportError.get().asFile
+        val errorFile = ideImportError.get().asFile
         errorFile.delete()
+
         val xcodebuildFingerprintFile = xcodebuildFingerprint.asFile.orNull
         val syntheticPackageFingerprintFile = syntheticPackageFingerprint.asFile.orNull
         // this is the case when package sync strategy is set to PackageResolvedSynchronization.None
@@ -204,7 +205,7 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
             params.additionalXcodeArgs.set(additionalXcodeArgs)
             params.markCompletion.set(markCompletion)
             params.ideaSyncEnabled.set(ideaSyncEnabled)
-            params.errorFile.set(swiftPMImportError)
+            params.errorFile.set(ideImportError)
 
             if (markCompletion) {
                 params.fingerprintCoordinationService.set(fingerprintCoordinationService)

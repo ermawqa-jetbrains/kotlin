@@ -515,12 +515,14 @@ sealed class SwiftPMDependency : Serializable {
 
 
 /** Controls persisted `Package.resolved` synchronization for SwiftPM import. */
-sealed class PackageResolvedSynchronization {
+sealed class PackageResolvedSynchronization : Serializable {
     /** Shares one persisted lock file bucket between all projects with the same identifier. */
     data class Identifier(val identifier: String) : PackageResolvedSynchronization()
 
     /** Disables persisted lock-file synchronization. */
-    object None : PackageResolvedSynchronization()
+    object None : PackageResolvedSynchronization() {
+        private fun readResolve(): Any = None
+    }
 }
 
 internal fun PackageResolvedSynchronization.toSerializable(): SerializablePackageResolvedSynchronization = when (this) {

@@ -50,8 +50,16 @@ internal abstract class ConvertSyntheticSwiftPMImportProjectIntoDefFile : Defaul
     @get:Input
     abstract val hasSwiftPMDependencies: Property<Boolean>
 
+    /**
+     * With fingerprinting optimizations we will use [fingerprintsXcodeDumpsDir] and otherwise per-project [syntheticDumpDir] is used
+     */
     @get:Internal
-    abstract val xcodeDumpsDir: DirectoryProperty
+    abstract val fingerprintsXcodeDumpsDir: DirectoryProperty
+
+    @get:Internal
+    val syntheticDumpDir: Provider<Directory> = xcodebuildSdk.flatMap { sdk ->
+        layout.buildDirectory.dir(XcodebuildDefFileUtils.clangDumpRelativeDir(sdk))
+    }
 
     @get:Nested
     abstract val localPackages: LocalPackageTrackingInputs
@@ -66,11 +74,6 @@ internal abstract class ConvertSyntheticSwiftPMImportProjectIntoDefFile : Defaul
     @get:OutputDirectory
     protected val ldDump: Provider<Directory> = xcodebuildSdk.flatMap { sdk ->
         layout.buildDirectory.dir(XcodebuildDefFileUtils.ldDumpRelativeDir(sdk))
-    }
-
-    @get:Internal
-    val syntheticDumpDir: Provider<Directory> = xcodebuildSdk.flatMap { sdk ->
-        layout.buildDirectory.dir(XcodebuildDefFileUtils.clangDumpRelativeDir(sdk))
     }
 
     /**
@@ -105,13 +108,13 @@ internal abstract class ConvertSyntheticSwiftPMImportProjectIntoDefFile : Defaul
      * up-to-date and the next regular build retries. Mirrors CInteropProcess.errorFileProvider.
      */
     @get:OutputFile
-    val swiftPMImportError: Provider<RegularFile> = xcodebuildSdk.flatMap { sdk ->
-        layout.buildDirectory.file("${XcodebuildDefFileUtils.defFilesRelativeDir(sdk)}/xcodebuild_error.out")
+    protected val ideImportError: Provider<RegularFile> = xcodebuildSdk.flatMap { sdk ->
+        layout.buildDirectory.file("${XcodebuildDefFileUtils.defFilesRelativeDir(sdk)}/convert_task_error.out")
     }
 
     init {
         // KT-85468: while the error marker exists the task is not up-to-date so the next build retries.
-        outputs.upToDateWhen { !swiftPMImportError.get().asFile.exists() }
+        outputs.upToDateWhen { !ideImportError.get().asFile.exists() }
     }
 
     @TaskAction
@@ -120,7 +123,7 @@ internal abstract class ConvertSyntheticSwiftPMImportProjectIntoDefFile : Defaul
         val defFiles = defFiles.getFile()
         val ldDump = ldDump.getFile()
 
-        val errorFile = swiftPMImportError.get().asFile
+        val errorFile = ideImportError.get().asFile
         errorFile.delete()
 
         if (!hasSwiftPMDependencies.get()) {
@@ -256,7 +259,7 @@ internal abstract class ConvertSyntheticSwiftPMImportProjectIntoDefFile : Defaul
     private fun resolveDumpedXcodeBuildArgsDir(): File {
         val hash = xcodebuildFingerprint.get().asFile.readText().trim()
 
-        return xcodeDumpsDir.get().asFile.resolve("$hash/swiftImportClangDump/${xcodebuildSdk.get()}")
+        return fingerprintsXcodeDumpsDir.get().asFile.resolve("$hash/swiftImportClangDump/${xcodebuildSdk.get()}")
     }
 
     fun defFilePath(architecture: AppleArchitecture): Provider<RegularFile> =

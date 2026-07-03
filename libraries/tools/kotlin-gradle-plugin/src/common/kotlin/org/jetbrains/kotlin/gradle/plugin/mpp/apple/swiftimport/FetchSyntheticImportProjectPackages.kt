@@ -86,12 +86,12 @@ internal abstract class FetchSyntheticImportProjectPackages : DefaultTask() {
      * up-to-date and the next regular build retries. Mirrors CInteropProcess.errorFileProvider.
      */
     @get:OutputFile
-    val swiftPMImportError: Provider<RegularFile> = syntheticImportProjectRoot.file("swiftPMImportResolve_error.out")
+    val ideImportError: Provider<RegularFile> = syntheticImportProjectRoot.file("swiftPMImportResolve_error.out")
 
     init {
         // KT-85468: a lenient failure during IDE sync writes an error file; while it exists the
         // task must not be up-to-date so the next build retries the resolve.
-        outputs.upToDateWhen { !swiftPMImportError.get().asFile.exists() }
+        outputs.upToDateWhen { !ideImportError.get().asFile.exists() }
     }
 
     /**
@@ -118,13 +118,15 @@ internal abstract class FetchSyntheticImportProjectPackages : DefaultTask() {
     protected abstract val workerExecutor: WorkerExecutor
 
     @TaskAction
-    fun generateSwiftPMSyntheticImportProjectAndFetchPackages() {
-        val errorFile = swiftPMImportError.get().asFile
+    fun fetchPackages() {
+        val errorFile = ideImportError.get().asFile
         errorFile.delete()
+
         if (!syntheticPackageFingerprint.isPresent) {
             submitSwiftResolveWorkAction(
                 ownerSyntheticImportProjectRoot = syntheticImportProjectRoot.get().asFile,
                 ownerSwiftPMDependenciesCheckout = swiftPMDependenciesCheckout.get().asFile,
+                syntheticPackageHash = null,
             )
             return
         }
@@ -166,26 +168,25 @@ internal abstract class FetchSyntheticImportProjectPackages : DefaultTask() {
             ownerSyntheticImportProjectRoot = syntheticImportProjectRoot,
             ownerSwiftPMDependenciesCheckout = swiftPMDependenciesCheckout,
             syntheticPackageHash = syntheticPackageHash,
-            markCompletion = true,
         )
     }
 
     fun submitSwiftResolveWorkAction(
         ownerSyntheticImportProjectRoot: File,
         ownerSwiftPMDependenciesCheckout: File,
-        syntheticPackageHash: String? = null,
-        markCompletion: Boolean = false,
+        syntheticPackageHash: String?,
     ) {
+        val isCoordinationEnabled = syntheticPackageHash != null
         workerExecutor.noIsolation().submit(SwiftResolveWorkAction::class.java) { params ->
             params.syntheticImportProjectRoot.set(ownerSyntheticImportProjectRoot)
             params.swiftPMDependenciesCheckout.set(ownerSwiftPMDependenciesCheckout)
             params.additionalSwiftPackageResolveArgs.set(additionalSwiftPackageResolveArgs)
             params.gitIgnoreCheckoutDir.set(gitIgnoreCheckoutDir)
-            params.markCompletion.set(markCompletion)
+            params.isCoordinationEnabled.set(isCoordinationEnabled)
             params.ideaSyncEnabled.set(ideaSyncEnabled)
-            params.errorFile.set(swiftPMImportError)
+            params.errorFile.set(ideImportError)
 
-            if (markCompletion) {
+            if (isCoordinationEnabled) {
                 params.coordinationService.set(coordinationService)
                 params.syntheticPackageHash.set(syntheticPackageHash!!)
                 params.syntheticLockFile.set(syntheticLockFile)

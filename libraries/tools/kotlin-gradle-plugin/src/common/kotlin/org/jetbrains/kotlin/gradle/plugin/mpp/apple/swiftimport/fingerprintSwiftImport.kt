@@ -35,35 +35,36 @@ import kotlin.collections.List
 @DisableCachingByDefault(because = "KT-84827 - SwiftPM import doesn't support caching yet")
 internal abstract class FingerprintSyntheticPackage : DefaultTask() {
     @get:Internal
-    abstract val transitiveDependencies: Property<TransitiveSwiftPMDependencies>
+    abstract val transitiveSwiftPMMetadata: Property<TransitiveSwiftPMMetadata>
 
     @get:Internal
-    abstract val directSwiftPMDependencies: Property<SwiftPMImportMetadata>
+    abstract val directSwiftPMMetadata: Property<SwiftPMImportMetadata>
+
+    @Suppress("unused")
+    @Serializable
+    private class JsonFingerprintWrapper(
+        val transitiveDependencies: TransitiveSwiftPMMetadata,
+        val directSwiftPMDependencies: SwiftPMImportMetadata
+    )
 
     /**
      * This was needed to for UDT check for transitive dependencies and metadata properties above.
-     * The @Input annotation for those were causing serialization "Deprecation" issues for Gradle 7.6.3,
-     * so they are marked as @Internal and this synthetic input added.
-     *
+     * The @Input annotation with java.io.Serializable for those was causing serialization "Deprecation" issues for Gradle 7.6.3,
+     * so they are marked as @Internal, and this synthetic input is computed using Kotlinx serialization instead.
      */
     @get:Input
-    protected val dependencyGraphFingerprintInput: Property<String> =
-        project.objects.property(String::class.java).convention(
-            transitiveDependencies.zip(directSwiftPMDependencies) { transitive, direct ->
-                fingerprintSwiftPMDependencyGraph(direct, transitive)
-                    .metadataByDependencyIdentifier
-                    .map { (identifier, metadata) ->
-                        "${identifier.identifier}:${identifier.isModular}:${fingerprintSwiftPMImportMetadata(metadata)}"
-                    }
-                    .sorted()
-                    .joinToString("|")
-            }
+    protected val dependencyGraphFingerprintInput: String
+        get() = json.encodeToString(
+            JsonFingerprintWrapper(
+                transitiveSwiftPMMetadata.get(),
+                directSwiftPMMetadata.get()
+            )
         )
 
 
     /** Normalized Package.resolved synchronization mode. This is part of the diagnostic identifier/dependencies key. */
     @get:Input
-    abstract val packageResolvedSynchronizationFingerprint: Property<String>
+    abstract val packageResolvedSynchronizationFingerprint: Property<PackageResolvedSynchronization>
 
     @get:OutputFile
     val syntheticPackageFingerprint: Provider<RegularFile> =
@@ -75,22 +76,24 @@ internal abstract class FingerprintSyntheticPackage : DefaultTask() {
 
     @TaskAction
     fun fingerprint() {
-
         val fingerprintedSwiftPMDependencyGraph = fingerprintSwiftPMDependencyGraph(
-            directSwiftPMDependencies.get(), transitiveDependencies.get()
+            directSwiftPMMetadata.get(), transitiveSwiftPMMetadata.get()
         )
 
-        val calcuatedSyntheticPackageFingerprint = fingerprintSyntheticPackage(
-            packageResolvedSynchronizationFingerprint = packageResolvedSynchronizationFingerprint.get(),
+        val calculatedSyntheticPackageFingerprint = fingerprintSyntheticPackage(
+            packageResolvedSynchronizationFingerprint = packageResolvedSynchronizationFingerprint.get().toSerializable(),
             fingerprintedDependencyGraph = fingerprintedSwiftPMDependencyGraph
         )
 
-        dumpFingerprint(calcuatedSyntheticPackageFingerprint, syntheticPackageFingerprint.get().asFile)
+        dumpFingerprint(calculatedSyntheticPackageFingerprint, syntheticPackageFingerprint.get().asFile)
     }
 
     companion object {
         const val TASK_NAME = "fingerprintSyntheticPackage"
         const val SYNTHETIC_PACKAGE_FINGERPRINT_PATH = "kotlin/syntheticPackageFingerprint"
+        protected val json = Json {
+            allowStructuredMapKeys = true
+        }
     }
 }
 
@@ -117,21 +120,18 @@ internal abstract class FingerprintXcodeBuild : DefaultTask() {
     abstract val syntheticPackageFingerprint: RegularFileProperty
 
     @get:OutputFile
-    val xcodebuildFingerprint: RegularFileProperty =
-        project.objects.fileProperty().convention(
-            xcodebuildSdk.flatMap { sdk ->
-                project.layout.buildDirectory.file(
-                    xcodebuildFingerprintPathForSdk(sdk)
-                )
-            }
-        )
+    val xcodebuildFingerprint: Provider<RegularFile> =
+        xcodebuildSdk.map { sdk ->
+            project.layout.buildDirectory.file(
+                xcodebuildFingerprintPathForSdk(sdk)
+            ).get()
+        }
 
     @get:Inject
     protected abstract val workerExecutor: WorkerExecutor
 
     @TaskAction
     fun fingerprint() {
-
         val fingerprint = fingerprintXcodebuildFingerprintInput(
             architectures = architectures.get(),
             additionalXcodeArgs = additionalXcodeArgs.get(),
@@ -149,7 +149,6 @@ internal abstract class FingerprintXcodeBuild : DefaultTask() {
     }
 }
 
-
 internal fun fingerprintXcodebuildFingerprintInput(
     architectures: Set<AppleArchitecture>,
     additionalXcodeArgs: List<String>,
@@ -159,7 +158,7 @@ internal fun fingerprintXcodebuildFingerprintInput(
         XcodebuildFingerprintInput(
             architectures = architectures.map { it.name }.sorted(),
             syntheticPackageFingerprint = syntheticPackageFingerprint,
-            additionalXcodeArgs = additionalXcodeArgs.sorted(),
+            additionalXcodeArgs = additionalXcodeArgs,
         )
     )
 
@@ -181,13 +180,13 @@ private data class XcodebuildFingerprintInput(
 
 @Serializable
 private data class SyntheticPackageFingerprintInput(
-    val packageResolvedSynchronizationFingerprint: String,
+    val packageResolvedSynchronizationFingerprint: SerializablePackageResolvedSynchronization,
     val dependencyGraphFingerprints: List<String>,
 )
 
 internal fun fingerprintSyntheticPackage(
-    packageResolvedSynchronizationFingerprint: String,
-    fingerprintedDependencyGraph: TransitiveSwiftPMDependencies,
+    packageResolvedSynchronizationFingerprint: SerializablePackageResolvedSynchronization,
+    fingerprintedDependencyGraph: TransitiveSwiftPMMetadata,
 ): String {
     val payload = dumpTaskFingerprintJson.encodeToString(
         SyntheticPackageFingerprintInput(
@@ -201,19 +200,25 @@ internal fun fingerprintSyntheticPackage(
     return sha256(payload)
 }
 
+/**
+ * We take in direct and transitive SwiftPM metadata, normalize these by erasing identity such as project names and sorting collections like
+ * the imported products list, and produce a Map which is the main fingerprinting for joining package generation and the fetching of the
+ * package. This is also used for generating the normalized package itself, so that project names become hashes of their SwiftPM metadata.
+ */
 internal fun fingerprintSwiftPMDependencyGraph(
-    targetMetadata: SwiftPMImportMetadata,
-    transitiveSwiftPMDependencies: TransitiveSwiftPMDependencies,
-): TransitiveSwiftPMDependencies {
+    directSwiftPMMetadata: SwiftPMImportMetadata,
+    transitiveSwiftPMMetadata: TransitiveSwiftPMMetadata,
+): TransitiveSwiftPMMetadata {
     val transformed = linkedMapOf<SwiftPMDependencyIdentifier, SwiftPMImportMetadata>()
 
-    if (targetMetadata.dependencies.isNotEmpty()) {
-        val hash = fingerprintSwiftPMImportMetadata(targetMetadata)
+    // isModular is only used for FUS, so for fingerprinting we ignore it
+    if (directSwiftPMMetadata.dependencies.isNotEmpty()) {
+        val hash = fingerprintSwiftPMImportMetadata(directSwiftPMMetadata)
         transformed[SwiftPMDependencyIdentifier(hash, isModular = false)] =
-            targetMetadata.copy()
+            directSwiftPMMetadata.copy()
     }
 
-    transitiveSwiftPMDependencies.metadataByDependencyIdentifier.entries
+    transitiveSwiftPMMetadata.metadataByDependencyIdentifier.entries
         .sortedBy { it.key.identifier }
         .forEach { (dependencyIdentifier, metadata) ->
             if (metadata.dependencies.isEmpty()) return@forEach
@@ -226,7 +231,7 @@ internal fun fingerprintSwiftPMDependencyGraph(
             )
         }
 
-    return TransitiveSwiftPMDependencies(transformed)
+    return TransitiveSwiftPMMetadata(transformed)
 }
 
 internal fun fingerprintSwiftPMImportMetadata(

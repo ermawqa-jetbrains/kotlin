@@ -6,18 +6,30 @@
 
 package org.jetbrains.kotlin.gradle.apple
 
+import org.gradle.kotlin.dsl.kotlin
+import org.gradle.kotlin.dsl.register
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.FingerprintSyntheticPackage
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.PackageResolvedSynchronization
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependency
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependencyIdentifier
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMImportMetadata
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.TransitiveSwiftPMMetadata
 import org.jetbrains.kotlin.gradle.testbase.GradleTest
 import org.jetbrains.kotlin.gradle.testbase.KGPBaseTest
 import org.jetbrains.kotlin.gradle.testbase.OsCondition
 import org.jetbrains.kotlin.gradle.testbase.SwiftPMImportGradlePluginTests
 import org.jetbrains.kotlin.gradle.testbase.assertTasksExecuted
+import org.jetbrains.kotlin.gradle.testbase.assertTasksUpToDate
 import org.jetbrains.kotlin.gradle.testbase.build
+import org.jetbrains.kotlin.gradle.testbase.buildScriptInjection
+import org.jetbrains.kotlin.gradle.testbase.buildScriptReturn
+import org.jetbrains.kotlin.gradle.testbase.plugins
 import org.jetbrains.kotlin.gradle.testbase.project
 import org.jetbrains.kotlin.gradle.uklibs.include
 import org.junit.jupiter.api.condition.OS
+import kotlin.String
 import kotlin.io.path.readText
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -29,6 +41,97 @@ import kotlin.test.assertNotEquals
 @SwiftPMImportGradlePluginTests
 class FingerprintSyntheticPackageTests : KGPBaseTest() {
 
+    @GradleTest
+    fun `test fingerprint task - ordering of arguments invalidates the fingeprint task, but the fingerprint remains stable`(version: GradleVersion) {
+        project("empty", version) {
+            plugins {
+                kotlin("multiplatform").apply(false)
+            }
+            val product1Parameter = "product1"
+            val product2Parameter = "product2"
+            buildScriptInjection {
+                project.tasks.register<FingerprintSyntheticPackage>("fingerprint") {
+                    packageResolvedSynchronizationFingerprint.set(PackageResolvedSynchronization.Identifier("Foo"))
+                    transitiveSwiftPMMetadata.set(
+                        TransitiveSwiftPMMetadata(
+                            mapOf(
+                                SwiftPMDependencyIdentifier("dep", true) to SwiftPMImportMetadata(
+                                    konanTargets = setOf("ios_arm64"),
+                                    iosDeploymentVersion = "123.0",
+                                    macosDeploymentVersion = "234.0",
+                                    watchosDeploymentVersion = null,
+                                    tvosDeploymentVersion = null,
+                                    isModulesDiscoveryEnabled = true,
+                                    dependencies = setOf(
+                                        SwiftPMDependency.Remote(
+                                            repository = SwiftPMDependency.Remote.Repository.Url("https://foo.bar/baz"),
+                                            version = SwiftPMDependency.Remote.Version.Exact("1.0.0"),
+                                            products = listOf(
+                                                SwiftPMDependency.Product("dep"),
+                                            ),
+                                            cinteropClangModules = emptyList(),
+                                            packageName = "baz",
+                                            traits = setOf()
+                                        )
+                                    ),
+                                ),
+                            )
+                        )
+                    )
+                    directSwiftPMMetadata.set(
+                        SwiftPMImportMetadata(
+                            konanTargets = setOf("foo"),
+                            iosDeploymentVersion = null,
+                            macosDeploymentVersion = null,
+                            watchosDeploymentVersion = null,
+                            tvosDeploymentVersion = null,
+                            isModulesDiscoveryEnabled = false,
+                            dependencies = setOf(
+                                SwiftPMDependency.Remote(
+                                    repository = SwiftPMDependency.Remote.Repository.Url("https://foo.bar/baz"),
+                                    version = SwiftPMDependency.Remote.Version.Exact("1.0.0"),
+                                    products = listOf(
+                                        SwiftPMDependency.Product(project.property(product1Parameter) as String),
+                                        SwiftPMDependency.Product(project.property(product2Parameter) as String),
+                                    ),
+                                    cinteropClangModules = emptyList(),
+                                    packageName = "baz",
+                                    traits = setOf()
+                                )
+                            )
+                        )
+                    )
+                }
+            }
+
+            val outputPath = buildScriptReturn {
+                project.tasks.withType(FingerprintSyntheticPackage::class.java).single().syntheticPackageFingerprint.get().asFile
+            }.buildAndReturn("tasks", "-P${product1Parameter}=a", "-P${product2Parameter}=b")
+
+            build("fingerprint", "-P${product1Parameter}=a", "-P${product2Parameter}=b")
+            val initialHash = outputPath.readText()
+
+            // If ordering didn't change, then the task should be UTD
+            build("fingerprint", "-P${product1Parameter}=a", "-P${product2Parameter}=b") {
+                assertTasksUpToDate(":fingerprint")
+            }
+
+            // If ordering changed, then the task should be executed
+            build("fingerprint", "-P${product1Parameter}=b", "-P${product2Parameter}=a") {
+                assertTasksExecuted(":fingerprint")
+            }
+            // but the fingerprint normalization should produce the same fingerprint
+            val secondHash = outputPath.readText()
+            assertEquals(initialHash, secondHash)
+
+            // And if we change values, then task and the fingerprint change
+            build("fingerprint", "-P${product1Parameter}=b", "-P${product2Parameter}=c") {
+                assertTasksExecuted(":fingerprint")
+            }
+            val thirdHash = outputPath.readText()
+            assertNotEquals(initialHash, thirdHash)
+        }
+    }
 
     @GradleTest
     fun `fingerprint task generates same fingerprint given the two target with same flattened dependency graph`(version: GradleVersion) {

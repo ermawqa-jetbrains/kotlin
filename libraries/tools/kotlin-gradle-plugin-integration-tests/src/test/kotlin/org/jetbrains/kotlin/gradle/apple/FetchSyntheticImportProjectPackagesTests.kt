@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SHARED_SYNTHETIC
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependency
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependencyIdentifier
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMImportMetadata
-import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.TransitiveSwiftPMDependencies
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.TransitiveSwiftPMMetadata
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.locateOrRegisterSwiftPMDependenciesExtension
 import org.jetbrains.kotlin.gradle.testbase.GradleTest
 import org.jetbrains.kotlin.gradle.testbase.GradleTestVersions
@@ -71,8 +71,8 @@ class FetchSyntheticImportProjectPackagesTests : KGPBaseTest() {
                 val generation = project.tasks.register<GenerateSyntheticLinkageImportProject>("packageGeneration") {
                     configureWithExtension(extension)
                     konanTargets.set(setOf(KonanTarget.IOS_ARM64))
-                    dependencyIdentifierToImportedSwiftPMDependencies.set(
-                        TransitiveSwiftPMDependencies(
+                    transitiveSwiftPMMetadata.set(
+                        TransitiveSwiftPMMetadata(
                             mapOf(
                                 SwiftPMDependencyIdentifier("dep", true) to SwiftPMImportMetadata(
                                     konanTargets = setOf("ios_arm64"),
