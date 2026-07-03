@@ -1388,10 +1388,13 @@ class BodyGenerator(
                 )
             }
 
+            wasmSymbols.wasmMemoryInternalIfJsOrNull -> {
+                body.buildGetGlobal(FieldGlobalSymbol(Synthetics.Globals.wasmMemoryGlobal.value), location)
+            }
+
             wasmSymbols.likely, wasmSymbols.unlikely -> {
                 return true
             }
-
             else -> {
                 return false
             }
