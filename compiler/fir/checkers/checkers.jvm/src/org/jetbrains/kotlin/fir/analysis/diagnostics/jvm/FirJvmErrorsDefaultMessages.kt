@@ -188,7 +188,7 @@ object FirJvmErrorsDefaultMessages : BaseDiagnosticRendererFactory() {
         )
         map.put(
             JAVA_CLASS_PROPERTY_REFERENCE,
-            "Property references to ''javaClass'' are error-prone: ''::javaClass'' creates a property reference, not a Java Class. Use ''.javaClass'' or ''::class.java'' instead.",
+            "Property references to 'javaClass' are error-prone: '::javaClass' creates a property reference, not the Java class of the receiver. Use '.javaClass' or '::class.java' instead.",
         )
 
         map.put(
