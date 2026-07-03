@@ -16,13 +16,23 @@ fun main(args: Array<String>) {
             testClass<AbstractLLNativeDiagnosticsTest>(
                 annotations = listOf(annotation(Tag::class.java, "llFirNative"))
             ) {
-                model("nativeTests", testMethod = "doTest", excludedPattern = CUSTOM_TEST_DATA_EXTENSION_PATTERN)
+                model(
+                    "nativeTests",
+                    testMethod = "doTest",
+                    excludedPattern = CUSTOM_TEST_DATA_EXTENSION_PATTERN,
+                    excludeDirs = listOf("serializationTests")
+                )
             }
 
             testClass<AbstractLLReversedNativeDiagnosticsTest>(
                 annotations = listOf(annotation(Tag::class.java, "llFirNative"))
             ) {
-                model("nativeTests", testMethod = "doTest", excludedPattern = CUSTOM_TEST_DATA_EXTENSION_PATTERN)
+                model(
+                    "nativeTests",
+                    testMethod = "doTest",
+                    excludedPattern = CUSTOM_TEST_DATA_EXTENSION_PATTERN,
+                    excludeDirs = listOf("serializationTests")
+                )
             }
         }
     }
