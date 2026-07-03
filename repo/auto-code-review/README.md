@@ -18,11 +18,15 @@ You can also use a run configuration named `Review diff with master` in IntelliJ
 It reviews the diff between the current working tree (including uncommitted changes in tracked files)
 and the revision in `origin/master` it is branched from.
 
+If you need to define a different base branch, pass `--base $branch`.
+`--base HEAD~5` also works, to review the last five commits.
+
 Upon completion, the tool generates a Markdown-formatted report and prints a link to it.
 The report includes rule violations (if any) and some meta-information.
 
-If you need to define a different base branch, pass `--base $branch`.
-`--base HEAD~5` also works, to review the last five commits.
+If you run the tool from IntelliJ IDEA, the printed report link is clickable and opens the report in the IDE.
+Viewing the report in IntelliJ IDEA with Markdown preview enabled is the intended way of reading it:
+all the links to code and code rules are clickable and open the destinations in the IDE.
 
 ## Operation
 
