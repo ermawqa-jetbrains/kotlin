@@ -159,6 +159,8 @@ internal abstract class ConvertSyntheticSwiftPMImportProjectIntoDefFile : Defaul
                     ldDump,
                 )
                 return
+            } else {
+                throw failure
             }
         }
     }
