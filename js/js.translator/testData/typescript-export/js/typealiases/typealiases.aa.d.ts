@@ -1,10 +1,28 @@
 declare namespace JS_TESTS {
     type Nullable<T> = T | null | undefined
     function KtSingleton<T>(): T & (abstract new() => any);
+    namespace kotlin {
+        class Pair<out A, out B> /* implements kotlin.io.Serializable */ {
+            constructor(first: A, second: B);
+            toString(): string;
+            copy(first?: A, second?: B): kotlin.Pair<A, B>;
+            equals(other: Nullable<any>): boolean;
+            hashCode(): number;
+            get first(): A;
+            get second(): B;
+        }
+        namespace Pair {
+            /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
+            namespace $metadata$ {
+                const constructor: abstract new <A, B>() => Pair<A, B>;
+            }
+        }
+    }
     namespace foo {
         function consumeMyInt(value: foo.MyInt): foo.MyInt;
         function consumeCallback(cb: Nullable<foo.SimpleCallback>): Nullable<void>;
         function consumeGenericAlias(value: foo.AliasGenericClass<string>): string;
+        function acceptInnerAlias(value: foo.AliasWithInnerClass<number, string>): void;
         class ClassUsingAlias {
             constructor(id: foo.MyInt, name: foo.MyString);
             get id(): foo.MyInt;
@@ -16,6 +34,9 @@ declare namespace JS_TESTS {
                 const constructor: abstract new () => ClassUsingAlias;
             }
         }
+        type AliasWithVarianceInAlieasedType<T> = foo.GenericClass<T>;
+        type AliasWithVarianceInsideOfAliasedType<T> = foo.GenericClassWithVariance<T>;
+        type AliasWithInnerClass<T, S> = foo.GenericClass.Inner<S, T>;
     }
     namespace foo {
         class SomeClass {
@@ -31,11 +52,33 @@ declare namespace JS_TESTS {
         class GenericClass<T> {
             constructor(value: T);
             get value(): T;
+            get Inner(): {
+                new<S>(): foo.GenericClass.Inner<S, T>;
+            };
         }
         namespace GenericClass {
             /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
             namespace $metadata$ {
                 const constructor: abstract new <T>() => GenericClass<T>;
+            }
+            class Inner<S, T$GenericClass> {
+                private constructor();
+            }
+            namespace Inner {
+                /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
+                namespace $metadata$ {
+                    const constructor: abstract new <S, T$GenericClass>() => Inner<S, T$GenericClass>;
+                }
+            }
+        }
+        class GenericClassWithVariance<out T> {
+            constructor(value: T);
+            get value(): T;
+        }
+        namespace GenericClassWithVariance {
+            /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
+            namespace $metadata$ {
+                const constructor: abstract new <T>() => GenericClassWithVariance<T>;
             }
         }
         class TwoGenericParamsClass<A, B> {
@@ -94,14 +137,42 @@ declare namespace JS_TESTS {
                 }
             }
         }
+        interface Comparable<in T> {
+            compareTo(other: T): number;
+            readonly __doNotUseOrImplementIt: {
+                readonly "foo.Comparable": unique symbol;
+            };
+        }
         class ClassWithConstraint<T extends foo.SomeClass> {
             constructor(value: T);
             get value(): T;
+            get InnerWithConstraints(): {
+                new<S extends foo.SomeEnum>(): foo.ClassWithConstraint.InnerWithConstraints<S, T>;
+            };
         }
         namespace ClassWithConstraint {
             /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
             namespace $metadata$ {
                 const constructor: abstract new <T extends foo.SomeClass>() => ClassWithConstraint<T>;
+            }
+            class InnerWithConstraints<S extends foo.SomeEnum, T$ClassWithConstraint extends foo.SomeClass> {
+                private constructor();
+            }
+            namespace InnerWithConstraints {
+                /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
+                namespace $metadata$ {
+                    const constructor: abstract new <S extends foo.SomeEnum, T$ClassWithConstraint extends foo.SomeClass>() => InnerWithConstraints<S, T$ClassWithConstraint>;
+                }
+            }
+        }
+        class RecursiveBoundClass<T extends foo.Comparable<T>> {
+            constructor(value: T);
+            get value(): T;
+        }
+        namespace RecursiveBoundClass {
+            /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
+            namespace $metadata$ {
+                const constructor: abstract new <T extends foo.Comparable<T>>() => RecursiveBoundClass<T>;
             }
         }
         class ClassWithNestedTypealiases {
@@ -119,6 +190,7 @@ declare namespace JS_TESTS {
             type NestedConcreteGenericAlias = foo.GenericClass<string>;
             type NestedCallback = () => void;
             type NestedNullable = Nullable<number>;
+            type Self = foo.ClassWithNestedTypealiases;
         }
         class GenericClassWithNestedTypealiases<T> {
             constructor();
@@ -130,6 +202,7 @@ declare namespace JS_TESTS {
             }
             type NestedAlias = number;
             type NestedGenericAlias<T, R> = foo.TwoGenericParamsClass<T, R>;
+            type Self<T> = foo.GenericClassWithNestedTypealiases<T>;
         }
         interface InterfaceWithNestedTypealiases {
             readonly __doNotUseOrImplementIt: {
@@ -141,6 +214,7 @@ declare namespace JS_TESTS {
             type InterfaceNestedClassAlias = foo.SomeClass;
             type InterfaceNestedGenericAlias<T> = foo.GenericClass<T>;
             type InterfaceNestedCallback = (p0: number) => string;
+            type Self = foo.InterfaceWithNestedTypealiases;
         }
         abstract class ObjectWithNestedTypealiases extends KtSingleton<ObjectWithNestedTypealiases.$metadata$.constructor>() {
             private constructor();
@@ -155,6 +229,7 @@ declare namespace JS_TESTS {
                     type ObjectNestedInt = number;
                     type ObjectNestedClassAlias = foo.SomeClass;
                     type ObjectNestedGenericAlias<T> = foo.GenericClass<T>;
+                    type Self = typeof foo.ObjectWithNestedTypealiases;
                 }
             }
         }
@@ -179,6 +254,7 @@ declare namespace JS_TESTS {
                         type CompanionNestedInt = number;
                         type CompanionNestedString = string;
                         type CompanionNestedGenericAlias<T> = foo.GenericClass<T>;
+                        type Self = typeof foo.ClassWithCompanionTypealiases.Companion;
                     }
                 }
             }
@@ -203,6 +279,7 @@ declare namespace JS_TESTS {
                     namespace constructor {
                         type NamedCompanionNestedAlias = string;
                         type NamedCompanionGenericAlias<T> = foo.GenericClass<T>;
+                        type Self = typeof foo.ClassWithNamedCompanionTypealiases.Named;
                     }
                 }
             }
@@ -233,6 +310,7 @@ declare namespace JS_TESTS {
             }
             type EnumNestedInt = number;
             type EnumNestedClassAlias = foo.SomeClass;
+            type Self = foo.EnumWithNestedTypealiases;
         }
         class OpenClassWithNestedTypealiases {
             constructor();
@@ -356,7 +434,10 @@ declare namespace JS_TESTS {
         type AliasTwoGenericParamsClass<A, B> = foo.TwoGenericParamsClass<A, B>;
         type FlippedTwoGenericParamsClass<A, B> = foo.TwoGenericParamsClass<B, A>;
         type PartiallySpecializedGenericClass<T> = foo.TwoGenericParamsClass<string, T>;
-        type AliasClassWithConstraint<T> = foo.ClassWithConstraint<T>;
+        type AliasClassWithConstraint<T extends foo.SomeClass> = foo.ClassWithConstraint<T>;
+        type AliasClassWithMultipleConstraints<T extends foo.Comparable<T> & foo.SomeClass & foo.SomeEnum> = kotlin.Pair<foo.RecursiveBoundClass<T>, foo.ClassWithConstraint.InnerWithConstraints<T, T>>;
+        type AliasRecursiveBound<T extends foo.Comparable<T>> = foo.RecursiveBoundClass<T>;
+        type AliasOfConstrainedAlias<T extends foo.SomeClass> = foo.AliasClassWithConstraint<T>;
         type NullableGenericClass<T> = Nullable<foo.GenericClass<T>>;
         type GenericClassNullableParam<T> = foo.GenericClass<Nullable<T>>;
         type SimpleCallback = () => void;

@@ -30,11 +30,23 @@ declare namespace JS_TESTS {
         class GenericClass<T> {
             constructor(value: T);
             get value(): T;
+            get Inner(): {
+                new<S>(): GenericClass.Inner<S, T>;
+            };
         }
         namespace GenericClass {
             /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
             namespace $metadata$ {
                 const constructor: abstract new <T>() => GenericClass<T>;
+            }
+            class Inner<S, T$GenericClass> {
+                private constructor();
+            }
+            namespace Inner {
+                /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
+                namespace $metadata$ {
+                    const constructor: abstract new <S, T$GenericClass>() => Inner<S, T$GenericClass>;
+                }
             }
         }
         class TwoGenericParamsClass<A, B> {
@@ -99,6 +111,16 @@ declare namespace JS_TESTS {
             /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
             namespace $metadata$ {
                 const constructor: abstract new <T extends foo.SomeClass>() => ClassWithConstraint<T>;
+            }
+        }
+        class RecursiveBoundClass<T extends unknown/* kotlin.Comparable<T> */> {
+            constructor(value: T);
+            get value(): T;
+        }
+        namespace RecursiveBoundClass {
+            /** @deprecated $metadata$ is used for internal purposes, please don't use it in your code, because it can be removed at any moment */
+            namespace $metadata$ {
+                const constructor: abstract new <T extends unknown/* kotlin.Comparable<T> */>() => RecursiveBoundClass<T>;
             }
         }
         class ClassWithNestedTypealiases {
@@ -296,5 +318,8 @@ declare namespace JS_TESTS {
                 const constructor: abstract new () => ClassUsingAlias;
             }
         }
+        function acceptInnerAlias(value: foo.GenericClass.Inner<string, number>): void;
     }
 }
+
+

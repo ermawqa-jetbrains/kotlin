@@ -13,7 +13,12 @@ package foo
 open class SomeClass(val value: String)
 
 @JsExport
-class GenericClass<T>(val value: T)
+class GenericClass<T>(val value: T) {
+  inner class Inner<S>
+}
+
+@JsExport
+class GenericClassWithVariance<out T>(val value: T)
 
 @JsExport
 class TwoGenericParamsClass<A, B>(val first: A, val second: B)
@@ -37,7 +42,17 @@ object SomeObject {
 }
 
 @JsExport
-open class ClassWithConstraint<T : SomeClass>(val value: T)
+public interface Comparable<in T> {
+    operator fun compareTo(other: T): kotlin.Int
+}
+
+@JsExport
+open class ClassWithConstraint<T : SomeClass>(val value: T) {
+    inner class InnerWithConstraints<S : SomeEnum>
+}
+
+@JsExport
+open class RecursiveBoundClass<T : Comparable<T>>(val value: T)
 
 // --- Primitive type aliases ---
 
@@ -154,6 +169,17 @@ typealias PartiallySpecializedGenericClass<T> = TwoGenericParamsClass<String, T>
 @JsExport
 typealias AliasClassWithConstraint<T> = ClassWithConstraint<T>
 
+@JsExport
+typealias AliasClassWithMultipleConstraints<T> = Pair<RecursiveBoundClass<T>, ClassWithConstraint<T>.InnerWithConstraints<T>>
+
+// Constraint inherited from an F-bound (exercises rewriting the bound in terms of the alias's parameter):
+@JsExport
+typealias AliasRecursiveBound<T> = RecursiveBoundClass<T>
+
+// Constraint inherited through an alias-to-alias chain (exercises full expansion):
+@JsExport
+typealias AliasOfConstrainedAlias<T> = AliasClassWithConstraint<T>
+
 // --- Nullable generic type aliases ---
 
 @JsExport
@@ -234,12 +260,16 @@ class ClassWithNestedTypealiases {
     typealias NestedConcreteGenericAlias = GenericClass<String>
     typealias NestedCallback = () -> Unit
     typealias NestedNullable = Int?
+
+    typealias Self = ClassWithNestedTypealiases
 }
 
 @JsExport
 class GenericClassWithNestedTypealiases<T> {
     typealias NestedAlias = Int
     typealias NestedGenericAlias<T, R> = TwoGenericParamsClass<T, R>
+
+    typealias Self<T> = GenericClassWithNestedTypealiases<T>
 }
 
 // --- Nested typealiases (inside interfaces) ---
@@ -250,6 +280,7 @@ interface InterfaceWithNestedTypealiases {
     typealias InterfaceNestedClassAlias = SomeClass
     typealias InterfaceNestedGenericAlias<T> = GenericClass<T>
     typealias InterfaceNestedCallback = (Int) -> String
+    typealias Self = InterfaceWithNestedTypealiases
 }
 
 // --- Nested typealiases (inside objects) ---
@@ -259,6 +290,7 @@ object ObjectWithNestedTypealiases {
     typealias ObjectNestedInt = Int
     typealias ObjectNestedClassAlias = SomeClass
     typealias ObjectNestedGenericAlias<T> = GenericClass<T>
+    typealias Self = ObjectWithNestedTypealiases
 }
 
 // --- Nested typealiases (inside companion objects) ---
@@ -269,6 +301,7 @@ class ClassWithCompanionTypealiases {
         typealias CompanionNestedInt = Int
         typealias CompanionNestedString = String
         typealias CompanionNestedGenericAlias<T> = GenericClass<T>
+        typealias Self = ClassWithCompanionTypealiases.Companion
     }
 }
 
@@ -277,6 +310,7 @@ class ClassWithNamedCompanionTypealiases {
     companion object Named {
         typealias NamedCompanionNestedAlias = String
         typealias NamedCompanionGenericAlias<T> = GenericClass<T>
+        typealias Self = ClassWithNamedCompanionTypealiases.Named
     }
 }
 
@@ -288,6 +322,7 @@ enum class EnumWithNestedTypealiases {
 
     typealias EnumNestedInt = Int
     typealias EnumNestedClassAlias = SomeClass
+    typealias Self = EnumWithNestedTypealiases
 }
 
 // --- Nested typealiases (inside open/abstract classes) ---
@@ -361,3 +396,17 @@ fun consumeGenericAlias(value: AliasGenericClass<String>): String = value.value
 
 @JsExport
 class ClassUsingAlias(val id: MyInt, val name: MyString)
+
+@JsExport
+typealias AliasWithVarianceInAlieasedType<T> = GenericClass<in T>
+
+@JsExport
+typealias AliasWithVarianceInsideOfAliasedType<T> = GenericClassWithVariance<T>
+
+// Type alias to an inner class and references to it:
+@JsExport
+typealias AliasWithInnerClass<T, S> = GenericClass<T>.Inner<S>
+
+@JsExport
+fun acceptInnerAlias(value: AliasWithInnerClass<Int, String>) {}
+
