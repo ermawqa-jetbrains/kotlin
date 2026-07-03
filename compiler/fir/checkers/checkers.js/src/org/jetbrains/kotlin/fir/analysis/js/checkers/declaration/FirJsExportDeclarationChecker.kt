@@ -233,14 +233,10 @@ object FirJsExportDeclarationChecker : FirBasicDeclarationChecker(MppCheckerKind
 
             is FirTypeAlias -> {
                 if (LanguageFeature.JsAllowExportTypealiases.isEnabled()) {
-                    for (typeParameter in declaration.typeParameters) {
-                        checkTypeParameter(typeParameter)
-                    }
-
-                    declaration.expandedTypeRef.coneType
-                        .takeIf { !it.isExportable() }
+                    declaration.expandedTypeRef
+                        .takeIf { !it.coneType.isExportable() }
                         ?.let {
-                            reporter.reportOn(declaration.source, FirJsErrors.NON_EXPORTABLE_TYPE, "referenced type", it)
+                            reporter.reportOn(it.source, FirJsErrors.NON_EXPORTABLE_TYPE, "referenced type", it.coneType)
                         }
                 } else reportWrongExportedDeclaration("typealias")
             }
