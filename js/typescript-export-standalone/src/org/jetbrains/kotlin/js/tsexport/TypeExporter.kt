@@ -214,7 +214,7 @@ internal class TypeExporter(
                 }.withImplicitlyExported(isImplicitlyExported, exportedSupertype)
             }
             is KaTypeAliasSymbol -> {
-                if (symbol.isEffectivelyExported(config)) {
+                if (isExported) {
                     ClassType(
                         name = symbol.getExportedFqName(shouldIncludePackage = config.generateNamespacesForPackages, config),
                         arguments = exportAllTypeArguments(type),

@@ -448,8 +448,8 @@ declare namespace JS_TESTS {
         type CallbackWithNullableParam = (p0: Nullable<number>) => Nullable<string>;
         type HigherOrderFunction = (p0: (p0: number) => string) => number;
         type CurriedFunction = (p0: number) => (p0: string) => boolean;
-        type SuspendCallback = any /*Suspend functions are not supported*/;
-        type SuspendTransformer<T, R> = any /*Suspend functions are not supported*/;
+        type SuspendCallback = () => Promise<void>;
+        type SuspendTransformer<T, R> = (p0: T) => Promise<R>;
         type AliasOfMyInt = foo.MyInt;
         type AliasOfAliasSomeClass = foo.AliasSomeClass;
         type AliasOfGenericAlias<T> = foo.AliasGenericClass<T>;

@@ -120,13 +120,19 @@ public data class ExportedPropertySetter(
 public class ErrorDeclaration(public val message: String) : ExportedDeclaration()
 
 public data class ExportedTypeAlias(
-    override val name: ExportedMemberName.Identifier,
+    val identifier: String,
     val typeParameters: List<ExportedTypeParameter>,
     val aliasedType: ExportedType,
     val originalClassId: ClassId? = null,
 ) : ExportedDeclaration(), ExportedMember {
-    override val isMember: Boolean = false
-    override val isStatic: Boolean = true
+    override val isMember: Boolean
+        get() = false
+
+    override val isStatic: Boolean
+        get() = false
+
+    override val name: ExportedMemberName.Identifier
+        get() = ExportedMemberName.Identifier(identifier)
 }
 
 public sealed class ExportedClass : ExportedDeclaration() {

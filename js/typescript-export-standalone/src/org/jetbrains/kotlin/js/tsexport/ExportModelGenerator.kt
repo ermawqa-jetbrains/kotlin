@@ -215,7 +215,7 @@ internal class ExportModelGenerator(private val config: TypeScriptExportConfig) 
             inheritedBounds = inheritedBounds,
         )
         return ExportedTypeAlias(
-            name = ExportedMemberName.Identifier(typeAlias.getExportedIdentifier()),
+            identifier = typeAlias.getExportedIdentifier(),
             typeParameters = typeParameterScope.values.toList(),
             aliasedType = exportType(typeAlias.expandedType, typeParameterScope),
             originalClassId = typeAlias.classId,

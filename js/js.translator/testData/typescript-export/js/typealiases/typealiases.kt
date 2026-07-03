@@ -4,7 +4,7 @@
 // WITH_STDLIB
 // INFER_MAIN_MODULE
 // MODULE: JS_TESTS
-// LANGUAGE: +JsAllowExportTypealiases +NestedTypeAliases
+// LANGUAGE: +JsAllowExportTypealiases +JsExportingSuspendLambdas +NestedTypeAliases
 // FILE: typealiases.kt
 
 package foo
