@@ -370,8 +370,8 @@ private class KaFirKotlinPropertyKtPropertyBasedSymbol : KaFirKotlinPropertySymb
         }
 
     @Deprecated(
-        "Use `correspondingPrimaryConstructorParameter` instead.",
-        replaceWith = ReplaceWith("correspondingPrimaryConstructorParameter != null")
+        "Use `KaKotlinProperty.primaryConstructorParameter` instead.",
+        ReplaceWith("primaryConstructorParameter != null")
     )
     override val isFromPrimaryConstructor: Boolean
         get() = withValidityAssertion {

@@ -359,7 +359,10 @@ public sealed class KaPropertySymbol : KaVariableSymbol(), KaTypeParameterOwnerS
      *
      * In contrast, `Foo.count` is not declared in the primary constructor.
      */
-    @Deprecated("Use `primaryConstructorParameter` instead.", ReplaceWith("primaryConstructorParameter != null"))
+    @Deprecated(
+        "Use `KaKotlinProperty.primaryConstructorParameter` instead.",
+        ReplaceWith("primaryConstructorParameter != null")
+    )
     public abstract val isFromPrimaryConstructor: Boolean
 
     /**
@@ -522,8 +525,8 @@ public abstract class KaSyntheticJavaPropertySymbol : KaPropertySymbol() {
     final override val backingFieldSymbol: KaBackingFieldSymbol? get() = withValidityAssertion { null }
 
     @Deprecated(
-        "Use `primaryConstructorParameter` instead.",
-        replaceWith = ReplaceWith("primaryConstructorParameter != null")
+        "Use `KaKotlinProperty.primaryConstructorParameter` instead.",
+        ReplaceWith("primaryConstructorParameter != null")
     )
     final override val isFromPrimaryConstructor: Boolean get() = withValidityAssertion { false }
     override val origin: KaSymbolOrigin get() = withValidityAssertion { KaSymbolOrigin.JAVA_SYNTHETIC_PROPERTY }
