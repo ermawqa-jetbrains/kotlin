@@ -44,7 +44,8 @@ class JvmBackendContext(
     val debuggerExtensions: JvmDebuggerExtensions?,
     val backendExtension: JvmBackendExtension,
     val irPluginContext: IrPluginContext?,
-    val evaluatorData: JvmEvaluatorData?
+    val evaluatorData: JvmEvaluatorData?,
+    module: IrModuleFragment,
 ) : CommonBackendContext {
     class SharedLocalDeclarationsData(
         val closureBuilders: MutableMap<IrDeclaration, ClosureBuilder> = mutableMapOf<IrDeclaration, ClosureBuilder>(),
@@ -69,9 +70,9 @@ class JvmBackendContext(
 
     override val diagnosticReporter = KtDiagnosticReporterWithImplicitIrBasedContext(state.diagnosticReporter, config.languageVersionSettings)
 
-    override val symbols = JvmSymbols(this)
+    override val symbols = JvmSymbols(this, module)
 
-    override val sharedVariablesManager = JvmSharedVariablesManager(state.module, symbols, irBuiltIns, irFactory)
+    override val sharedVariablesManager = JvmSharedVariablesManager(module, symbols, irBuiltIns, irFactory)
 
     lateinit var getIntrinsic: (IrFunctionSymbol) -> IntrinsicMarker?
 
