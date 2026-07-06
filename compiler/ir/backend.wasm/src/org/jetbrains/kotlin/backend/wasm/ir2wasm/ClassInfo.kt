@@ -5,8 +5,8 @@
 
 package org.jetbrains.kotlin.backend.wasm.ir2wasm
 
-import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
-import org.jetbrains.kotlin.descriptors.DescriptorVisibilities.INTERNAL
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibilities.Internal as INTERNAL
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.backend.js.utils.realOverrideTarget
@@ -153,7 +153,7 @@ class InterfaceMetadata(val iFace: IrClass, irBuiltIns: IrBuiltIns) {
     val methods: List<VirtualMethodMetadata> = iFace.declarations
         .asSequence()
         .filterIsInstance<IrSimpleFunction>()
-        .filter { !it.isFakeOverride && it.visibility != DescriptorVisibilities.PRIVATE && it.modality != Modality.FINAL }
+        .filter { !it.isFakeOverride && it.visibility != Visibilities.Private && it.modality != Modality.FINAL }
         .mapTo(mutableListOf()) { VirtualMethodMetadata(it, it.wasmSignature(irBuiltIns)) }
 }
 
