@@ -83,7 +83,7 @@ private class IrFileValidator(
     private fun List<ContextUpdater>.runWithContextUpdaters(element: IrElement, block: () -> Unit) {
         for (updater in this) updater.enterContext(context, element)
         block()
-        for (updater in this) updater.exitContext(context, element)
+        for (updater in this.asReversed()) updater.exitContext(context, element)
     }
 
     private fun getCheckersFor(type: Class<out IrElement>) = checkersPerElementCache.computeIfAbsent(type) {
