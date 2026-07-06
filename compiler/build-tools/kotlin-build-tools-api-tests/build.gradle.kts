@@ -261,7 +261,6 @@ testing {
                     projectTests {
                         testTask(
                             taskName = testTask.name,
-                            jUnitMode = JUnitMode.JUnit5,
                             javaLauncher = JdkMajorVersion.JDK_1_8,
                             skipInLocalBuild = false
                         ) {
@@ -297,7 +296,6 @@ testing {
                     projectTests {
                         testTask(
                             taskName = testTask.name,
-                            jUnitMode = JUnitMode.JUnit5,
                             javaLauncher = JdkMajorVersion.JDK_1_8,
                             skipInLocalBuild = false
                         ) {
