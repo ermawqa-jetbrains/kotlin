@@ -53,7 +53,28 @@ internal open class SirFunctionFromKtSymbol(
         translateExtensionParameter()
     }
     override val parameters: List<SirParameter> by lazy {
-        translateParameters()
+        val translated = translateParameters()
+        // Methods that get a reverse bridge (see needsReverseBridge) must render their vararg
+        // parameters as arrays: the reverse-bridge thunk passes an `Array` to the Swift declaration,
+        // and Swift cannot splat an array into a variadic parameter.
+        if (rendersVariadicParametersAsArray()) {
+            translated.map { param ->
+                if (param.isVariadic && !param.renderVariadicAsArray) {
+                    SirParameter(
+                        argumentName = param.argumentName,
+                        parameterName = param.parameterName,
+                        type = param.type,
+                        origin = param.origin,
+                        isVariadic = true,
+                        renderVariadicAsArray = true,
+                    )
+                } else {
+                    param
+                }
+            }
+        } else {
+            translated
+        }
     }
     override val returnType: SirType by lazy {
         translateReturnType()
@@ -207,6 +228,24 @@ internal open class SirFunctionFromKtSymbol(
                 return@withSessions true
             }
             else -> return@withSessions false
+        }
+    }
+
+    /**
+     * True for methods whose vararg parameters must be rendered as Swift arrays instead of variadics
+     * (see [SirParameter.renderVariadicAsArray]). Mirrors the structural cases of [needsReverseBridge]
+     * (protocol members, and open members of open classes) but intentionally omits the
+     * `isUnavailable`/`isAsync` guards: those transitively read `attributes`, which would re-enter the
+     * lazily-computed [parameters] and recurse. Rendering a vararg as an array for an unavailable/async
+     * member that ends up without a reverse bridge is harmless — the Kotlin-side vararg bridging is
+     * unchanged and there is no reverse thunk to mismatch.
+     */
+    private fun rendersVariadicParametersAsArray(): Boolean = withSessions {
+        if (!isInstance) return@withSessions false
+        when (val containingDecl = parent) {
+            is SirClass -> modality == SirModality.OPEN && containingDecl.modality == SirModality.OPEN
+            is SirProtocol -> true
+            else -> false
         }
     }
 

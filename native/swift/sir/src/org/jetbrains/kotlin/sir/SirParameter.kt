@@ -11,6 +11,14 @@ class SirParameter(
     val type: SirType,
     val origin: Origin? = null,
     val isVariadic: Boolean = false,
+    /**
+     * When set together with [isVariadic], the Swift-facing signature renders the parameter as an array
+     * (`[T]`) instead of a variadic (`T...`), while it is still bridged as a Kotlin `vararg` (spread on
+     * the Kotlin side). Required for parameters of reverse-bridged methods (interface/protocol methods
+     * and `open` overridable methods): the reverse-bridge thunk passes an `Array` to the Swift
+     * declaration, and Swift has no array-to-variadic splat.
+     */
+    val renderVariadicAsArray: Boolean = false,
 ) {
     init {
         require(argumentName?.isEmpty() != true) { "argumentName must not be empty; use null to suppress the argument label" }

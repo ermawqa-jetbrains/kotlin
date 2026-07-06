@@ -625,10 +625,20 @@ internal class SirAsSwiftSourcesPrinter private constructor(
         }
 
     private val SirParameter.swiftRender: String
-        get() = (argumentName?.swiftIdentifier ?: "_") +
-                (parameterName?.swiftIdentifier?.let { " $it" } ?: "") + ": " +
-                type.swiftRender((SirTypeVariance.CONTRAVARIANT)) +
-                if (isVariadic) "..." else ""
+        get() {
+            // A variadic parameter of a reverse-bridged method is rendered as an array (see
+            // SirParameter.renderVariadicAsArray): the reverse-bridge thunk passes an Array to it.
+            val renderAsArray = isVariadic && renderVariadicAsArray
+            val renderedType = if (renderAsArray) {
+                SirArrayType(type).swiftRender(SirTypeVariance.CONTRAVARIANT)
+            } else {
+                type.swiftRender(SirTypeVariance.CONTRAVARIANT)
+            }
+            return (argumentName?.swiftIdentifier ?: "_") +
+                    (parameterName?.swiftIdentifier?.let { " $it" } ?: "") + ": " +
+                    renderedType +
+                    if (isVariadic && !renderVariadicAsArray) "..." else ""
+        }
 }
 
 private val SirVisibility.swift
