@@ -577,7 +577,7 @@ abstract class FirDataFlowAnalyzer(
                             flow.addImplication((expressionVariable eq isType) implies (operandVariable typeEq type))
                             flow.addImplication((expressionVariable eq !isType) implies (operandVariable typeNotEq type))
 
-                            if (complementarySymbols != null) {
+                            if (!complementarySymbols.isNullOrEmpty()) {
                                 flow.addImplication((expressionVariable eq isType) implies (operandVariable valueNotEq complementarySymbols))
                             }
                         }
@@ -801,7 +801,7 @@ abstract class FirDataFlowAnalyzer(
                 is FirRegularClassSymbol if symbol.classKind.isObject -> with(components) { symbol.getComplementarySymbols() }
                 else -> null
             }
-            if (complementarySymbols != null && complementarySymbols.isNotEmpty()) {
+            if (!complementarySymbols.isNullOrEmpty()) {
                 flow.addImplication((expressionVariable eq isEq) implies (variable valueNotEq complementarySymbols))
             }
         }
