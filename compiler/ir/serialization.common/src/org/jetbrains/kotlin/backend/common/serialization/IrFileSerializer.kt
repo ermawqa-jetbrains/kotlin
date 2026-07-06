@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.backend.common.serialization.encodings.*
 import org.jetbrains.kotlin.backend.common.serialization.proto.IrSimpleTypeNullability
 import org.jetbrains.kotlin.config.KlibAbiCompatibilityLevel
 import org.jetbrains.kotlin.descriptors.*
-import org.jetbrains.kotlin.descriptors.DescriptorVisibilities.INTERNAL
+import org.jetbrains.kotlin.descriptors.Visibilities.Internal as INTERNAL
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrFileEntry
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -1457,7 +1457,7 @@ open class IrFileSerializer(
             .setBase(serializeIrDeclarationBase(field, parent, FieldFlags.encode(field)))
             .setNameType(serializeNameAndType(field.name, field.type))
         if (!(settings.bodiesOnlyForInlines &&
-                    (field.parent as? IrDeclarationWithVisibility)?.visibility != DescriptorVisibilities.LOCAL &&
+                    (field.parent as? IrDeclarationWithVisibility)?.visibility != Visibilities.Local &&
                     (field.initializer?.expression !is IrConst))
         ) {
             val initializer = field.initializer?.expression
@@ -1661,7 +1661,7 @@ open class IrFileSerializer(
         val parent = member.parent
         require(parent is IrClass)
         if (backendSpecificSerializeAllMembers(parent)) return true
-        if (settings.bodiesOnlyForInlines && member is IrAnonymousInitializer && parent.visibility != DescriptorVisibilities.LOCAL)
+        if (settings.bodiesOnlyForInlines && member is IrAnonymousInitializer && parent.visibility != Visibilities.Local)
             return false
         if (skipIfPrivate(member)) {
             return false
