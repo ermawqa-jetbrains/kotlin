@@ -21,7 +21,7 @@ internal class WasmAddFunctionSupertypeToSuspendFunctionLowering(override val co
         }
 
     override fun transformReturnType(suspendFunctionReturnType: IrType) =
-        if (!context.wasmUseStackSwitching) context.irBuiltIns.anyNType else suspendFunctionReturnType
+        if (!context.wasmUseStackSwitching) super.transformReturnType(suspendFunctionReturnType) else suspendFunctionReturnType
 
     override fun addMissingSupertypes(clazz: IrClass) {
         // In Kotlin/Wasm only the (K)SuspendFunctionN <: (K)FunctionN+1 direction is required.

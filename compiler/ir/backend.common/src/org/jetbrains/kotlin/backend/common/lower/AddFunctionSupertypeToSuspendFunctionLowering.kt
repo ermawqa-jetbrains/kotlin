@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.common.lower
 
 import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.backend.common.DeclarationTransformer
+import org.jetbrains.kotlin.backend.common.lower.coroutines.defaultLoweredSuspendFunctionReturnType
 import org.jetbrains.kotlin.backend.common.lower.coroutines.getOrCreateFunctionWithContinuationStub
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -22,6 +23,7 @@ import org.jetbrains.kotlin.ir.util.getAllSubstitutedSupertypes
 import org.jetbrains.kotlin.ir.util.isFunction
 import org.jetbrains.kotlin.ir.util.isKFunction
 import org.jetbrains.kotlin.ir.util.isKSuspendFunction
+import org.jetbrains.kotlin.ir.util.isNullable
 import org.jetbrains.kotlin.ir.util.isSuspendFunction
 import org.jetbrains.kotlin.ir.util.overrides
 import org.jetbrains.kotlin.ir.util.simpleFunctions
@@ -50,7 +52,7 @@ open class AddFunctionSupertypeToSuspendFunctionLowering(open val context: Commo
         irFunction.getOrCreateFunctionWithContinuationStub(context, ::transformReturnType)
 
     protected open fun transformReturnType(suspendFunctionReturnType: IrType) =
-        context.irBuiltIns.anyNType
+        defaultLoweredSuspendFunctionReturnType(suspendFunctionReturnType, context.irBuiltIns)
 
     private fun IrClass.getLoweredInvokeMethod(): IrSimpleFunction {
         val invokeMethod = simpleFunctions().single {
@@ -81,7 +83,7 @@ open class AddFunctionSupertypeToSuspendFunctionLowering(open val context: Commo
     }
 
     /**
-     * Adds `(K)FunctionN+1<P1..Pn, Continuation<R>, Any?>` as a supertype of each `(K)SuspendFunctionN<P1..Pn, R>` supertype.
+     * Adds `(K)FunctionN+1<P1..Pn, Continuation<R>, Any(?)>` as a supertype of each `(K)SuspendFunctionN<P1..Pn, R>` supertype.
      */
     protected fun addFunctionSupertypesToSuspendFunctions(clazz: IrClass, supertypes: Set<IrSimpleType>) {
         val suspendFunctionSuperTypes = supertypes.filter {
@@ -116,7 +118,7 @@ open class AddFunctionSupertypeToSuspendFunctionLowering(open val context: Commo
     }
 
     /**
-     * Adds the reverse `(K)SuspendFunctionN<P1..Pn, R>` supertype to each `(K)FunctionN+1<P1..Pn, Continuation<R>, Any?>` supertype.
+     * Adds the reverse `(K)SuspendFunctionN<P1..Pn, R>` supertype to each `(K)FunctionN+1<P1..Pn, Continuation<R>, Any(?)>` supertype.
      */
     protected fun addSuspendFunctionSupertypesToFunctions(clazz: IrClass, supertypes: Set<IrSimpleType>) {
         val functionWithContinuationSuperTypes = supertypes.filter {
