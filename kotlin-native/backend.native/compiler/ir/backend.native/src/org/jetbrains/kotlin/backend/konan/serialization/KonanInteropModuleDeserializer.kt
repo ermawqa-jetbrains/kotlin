@@ -319,7 +319,15 @@ internal class KonanInteropModuleDeserializer(
             }
 
             for ([id, declarations] in deserializedDeclarations) {
-                if (allMetadataDeclarations[id]?.get() == null) {
+                // Explanation of the condition below:
+                //    *Do add metadata to cache if* there is no entry for it already (first deserialization).
+                //    *Do add metadata to cache if* it has a SoftReference entry, but it was GC'ed (checked by .get() == null).
+                // *Don't add metadata to cache if* it has a SoftReference entry which still holds a value. It will be the same as the
+                //       freshly deserialized declaration, so just keep the old one.
+                // *Don't add metadata to cache if* it has a `null` entry. It means that the declaration with a given id was already
+                //       converted to IR. We rely on this information to avoid creating IR for the same declaration twice.
+                val existingRef = allMetadataDeclarations[id]
+                if ((existingRef == null && id !in allMetadataDeclarations) || (existingRef != null && existingRef.get() == null)) {
                     allMetadataDeclarations[id] = SoftReference(declarations)
                 }
             }
