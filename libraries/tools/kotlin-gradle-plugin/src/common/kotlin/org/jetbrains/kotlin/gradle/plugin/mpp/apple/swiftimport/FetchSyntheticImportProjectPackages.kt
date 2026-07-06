@@ -137,21 +137,21 @@ internal abstract class FetchSyntheticImportProjectPackages : DefaultTask() {
         )
         when (claim) {
             is CoordinationClaim.Existing -> {
-                coordinationService.get().awaitSwiftResolved(claim.bucket)
-                finalizeFetchTask(
-                    fs,
-                    claim.bucket.ownerPackageResolvedFile,
-                    syntheticLockFile.get().asFile,
-                    claim.bucket.ownerWorkspaceStateFile,
-                    workspaceStateJson.get().asFile
-                )
+                workerExecutor.noIsolation().submit(SwiftResolveAwaitWorkAction::class.java) {
+                    it.sourcePackageResolvedFile.set(claim.bucket.ownerPackageResolvedFile)
+                    it.destinationPackageResolved.set(syntheticLockFile.get().asFile)
+                    it.sourceWorkspaceStateFile.set(claim.bucket.ownerWorkspaceStateFile)
+                    it.destinationWorkspaceStateFile.set(workspaceStateJson.get().asFile)
+                    it.syntheticPackageHash.set(claim.bucket.key)
+                    it.coordinationService.set(coordinationService)
+                }
             }
 
             is CoordinationClaim.Owner -> {
                 runOwnerSwiftResolve(
                     claim.bucket.ownerSyntheticImportProjectRoot,
                     claim.bucket.ownerSwiftPMDependenciesCheckout,
-                    ownerHash
+                    claim.bucket.key,
                 )
             }
         }
@@ -162,7 +162,7 @@ internal abstract class FetchSyntheticImportProjectPackages : DefaultTask() {
     private fun runOwnerSwiftResolve(
         syntheticImportProjectRoot: File,
         swiftPMDependenciesCheckout: File,
-        syntheticPackageHash: String,
+        syntheticPackageHash: SwiftResolveBucketMapKey,
     ) {
         submitSwiftResolveWorkAction(
             ownerSyntheticImportProjectRoot = syntheticImportProjectRoot,
@@ -174,7 +174,7 @@ internal abstract class FetchSyntheticImportProjectPackages : DefaultTask() {
     fun submitSwiftResolveWorkAction(
         ownerSyntheticImportProjectRoot: File,
         ownerSwiftPMDependenciesCheckout: File,
-        syntheticPackageHash: String?,
+        syntheticPackageHash: SwiftResolveBucketMapKey?,
     ) {
         val isCoordinationEnabled = syntheticPackageHash != null
         workerExecutor.noIsolation().submit(SwiftResolveWorkAction::class.java) { params ->
@@ -182,7 +182,7 @@ internal abstract class FetchSyntheticImportProjectPackages : DefaultTask() {
             params.swiftPMDependenciesCheckout.set(ownerSwiftPMDependenciesCheckout)
             params.additionalSwiftPackageResolveArgs.set(additionalSwiftPackageResolveArgs)
             params.gitIgnoreCheckoutDir.set(gitIgnoreCheckoutDir)
-            params.isCoordinationEnabled.set(isCoordinationEnabled)
+            params.coordinationEnabled.set(isCoordinationEnabled)
             params.ideaSyncEnabled.set(ideaSyncEnabled)
             params.errorFile.set(ideImportError)
 

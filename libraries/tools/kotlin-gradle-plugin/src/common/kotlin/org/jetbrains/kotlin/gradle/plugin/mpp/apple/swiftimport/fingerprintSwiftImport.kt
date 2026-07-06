@@ -53,13 +53,14 @@ internal abstract class FingerprintSyntheticPackage : DefaultTask() {
      * so they are marked as @Internal, and this synthetic input is computed using Kotlinx serialization instead.
      */
     @get:Input
-    protected val dependencyGraphFingerprintInput: String
-        get() = json.encodeToString(
+    protected val dependencyGraphFingerprintInput: Provider<String> = transitiveSwiftPMMetadata.zip(directSwiftPMMetadata) { transitive, direct ->
+        json.encodeToString(
             JsonFingerprintWrapper(
-                transitiveSwiftPMMetadata.get(),
-                directSwiftPMMetadata.get()
+                transitive,
+                direct,
             )
         )
+    }
 
 
     /** Normalized Package.resolved synchronization mode. This is part of the diagnostic identifier/dependencies key. */
@@ -81,7 +82,7 @@ internal abstract class FingerprintSyntheticPackage : DefaultTask() {
         )
 
         val calculatedSyntheticPackageFingerprint = fingerprintSyntheticPackage(
-            packageResolvedSynchronizationFingerprint = packageResolvedSynchronizationFingerprint.get().toSerializable(),
+            packageResolvedSynchronizationFingerprint = packageResolvedSynchronizationFingerprint.get().toKotlinxSerializable(),
             fingerprintedDependencyGraph = fingerprintedSwiftPMDependencyGraph
         )
 
@@ -333,8 +334,9 @@ private fun SwiftPMDependency.normalizedForFingerprint(): SwiftPMDependency = wh
         products = products.map { it.normalizedForFingerprint() }.sortedBy { it.name },
         cinteropClangModules = cinteropClangModules.map { it.normalizedForFingerprint() }.sortedBy { it.stableSortKey() },
         traits = traits.sorted().toSet(),
-
-        )
+        // FIXME:
+        version = SwiftPMDependency.Remote.Version.Exact("1.0.0"),
+    )
 }
 
 private fun SwiftPMDependency.Product.normalizedForFingerprint(): SwiftPMDependency.Product =

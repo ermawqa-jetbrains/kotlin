@@ -34,17 +34,17 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
 
     /** In-memory buckets for the current Gradle invocation, keyed by the xcodebuild execution fingerprint. */
     private val dumpBucketsByXcodebuildFingerprint = mutableMapOf<XcodeDumpBucketMapKey, XcodeDumpBucket>()
-    private val fetchBucketsBySyntheticPackageFingerprint = mutableMapOf<String, SwiftResolveBucket>()
-    private val generatePackageBucketBySyntheticPackageFingerprint = mutableMapOf<String, GeneratePackageBucket>()
+    private val fetchBucketsBySyntheticPackageFingerprint = mutableMapOf<SwiftResolveBucketMapKey, SwiftResolveBucket>()
+    private val generatePackageBucketBySyntheticPackageFingerprint = mutableMapOf<GeneratePackageBucketMapKey, GeneratePackageBucket>()
 
     private inline fun <K, B : CoordinationBucket> claimOrJoin(
         key: K,
         buckets: MutableMap<K, B>,
-        createOwner: () -> B,
+        createOwner: (K) -> B,
     ): CoordinationClaim<B> {
         synchronized(stateLock) {
             buckets[key]?.let { return CoordinationClaim.Existing(it) }
-            val newBucket = createOwner()
+            val newBucket = createOwner(key)
             buckets[key] = newBucket
             return CoordinationClaim.Owner(newBucket)
         }
@@ -54,7 +54,7 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
         packageHash: String,
     ): CoordinationClaim<GeneratePackageBucket> =
         claimOrJoin(
-            key = packageHash,
+            key = GeneratePackageBucketMapKey(packageHash),
             buckets = generatePackageBucketBySyntheticPackageFingerprint,
             createOwner = {
                 GeneratePackageBucket(
@@ -67,14 +67,15 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
         packageHash: String,
     ): CoordinationClaim<SwiftResolveBucket> =
         claimOrJoin(
-            key = packageHash,
+            key = SwiftResolveBucketMapKey(packageHash),
             buckets = fetchBucketsBySyntheticPackageFingerprint,
-            createOwner = {
+            createOwner = { key ->
                 val packageRoot = sharedPackageGenerationRoot(packageHash)
 
                 val checkoutDir = sharedCheckoutDir(packageHash)
 
                 SwiftResolveBucket(
+                    key = key,
                     ownerPackageResolvedFile = sharedPackageResolved(packageRoot),
                     ownerWorkspaceStateFile = sharedCheckoutWorkspaceStateJsonFile(checkoutDir),
                     ownerSwiftPMDependenciesCheckout = checkoutDir,
@@ -90,12 +91,13 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
         claimOrJoin(
             key = XcodeDumpBucketMapKey(xcodebuildExecutionHash, xcodebuildSdk),
             buckets = dumpBucketsByXcodebuildFingerprint,
-            createOwner = {
+            createOwner = { key ->
                 val bucketRoot = sharedDumpBucketRoot(xcodebuildExecutionHash)
 
                 XcodeDumpBucket(
+                    key = key,
                     ownerDumpDir = sharedDumpDir(bucketRoot, xcodebuildSdk),
-                    ownerDerivedDataDir = sharedDerivedDataDir(bucketRoot),
+                    ownerDerivedDataDir = sharedDerivedDataDir(bucketRoot, xcodebuildSdk),
                 )
 
             }
@@ -107,8 +109,8 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
     private fun sharedDumpDir(bucketRoot: File, xcodebuildSdk: String): File =
         bucketRoot.resolve("swiftImportClangDump/$xcodebuildSdk")
 
-    private fun sharedDerivedDataDir(bucketRoot: File): File =
-        bucketRoot.resolve("swiftImportDd")
+    private fun sharedDerivedDataDir(bucketRoot: File, xcodebuildSdk: String): File =
+        bucketRoot.resolve("swiftImportDd").resolve("dd_$xcodebuildSdk")
 
     internal fun sharedPackageGenerationRoot(packageHash: String): File =
         parameters.sharedSyntheticPackageRoot.get().asFile.resolve(packageHash)
@@ -144,9 +146,10 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
         }
     }
 
-    fun awaitXcodeDump(bucket: XcodeDumpBucket) {
-        // Joined tasks wait here instead of depending on an owner task. At execution time the Gradle task graph is already
-        // fixed, so a latch inside the build service is the safe coordination primitive.
+    fun awaitXcodeDump(key: XcodeDumpBucketMapKey) {
+        val bucket = synchronized(stateLock) {
+            dumpBucketsByXcodebuildFingerprint[key]
+        } ?: error("No bucket found for key $key")
         bucket.completion.await()
         bucket.failure?.let {
             throw GradleException("Shared SwiftPM xcodebuild dump failed for bucket '${bucket}'", it)
@@ -154,11 +157,9 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
     }
 
     fun markXcodeDumpCompleted(
-        xcodebuildExecutionHash: String,
-        xcodebuildSdk: String,
+        key: XcodeDumpBucketMapKey,
     ) {
         synchronized(stateLock) {
-            val key = XcodeDumpBucketMapKey(xcodebuildExecutionHash, xcodebuildSdk)
             val bucket = dumpBucketsByXcodebuildFingerprint[key]
                 ?: error("Xcode dump bucket is missing for $key")
             bucket.completed = true
@@ -168,12 +169,10 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
     }
 
     fun markXcodeDumpFailed(
-        xcodebuildExecutionHash: String,
-        xcodebuildSdk: String,
+        key: XcodeDumpBucketMapKey,
         failure: Throwable,
     ) {
         synchronized(stateLock) {
-            val key = XcodeDumpBucketMapKey(xcodebuildExecutionHash, xcodebuildSdk)
             val bucket = dumpBucketsByXcodebuildFingerprint[key]
                 ?: error("Xcode dump bucket is missing for $key")
             bucket.failure = failure
@@ -182,7 +181,7 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
 
     }
 
-    fun markSwiftResolveCompleted(packageHash: String) {
+    fun markSwiftResolveCompleted(packageHash: SwiftResolveBucketMapKey) {
         synchronized(stateLock) {
             val bucket = fetchBucketsBySyntheticPackageFingerprint[packageHash]
                 ?: error("Swift resolve bucket is missing for package hash $packageHash")
@@ -192,7 +191,7 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
         }
     }
 
-    fun markSwiftResolveFailed(packageHash: String, failure: Throwable) {
+    fun markSwiftResolveFailed(packageHash: SwiftResolveBucketMapKey, failure: Throwable) {
         synchronized(stateLock) {
             val bucket = fetchBucketsBySyntheticPackageFingerprint[packageHash]
                 ?: error("Swift resolve bucket is missing for package hash $packageHash")
@@ -202,24 +201,18 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
         }
     }
 
-    fun awaitSwiftResolved(bucket: SwiftResolveBucket) {
+    fun awaitSwiftResolved(key: SwiftResolveBucketMapKey) {
         // Joined tasks wait here instead of depending on an owner task. At execution time the Gradle task graph is already
         // fixed, so a latch inside the build service is the safe coordination primitive.
+        val bucket = synchronized(stateLock) {
+            fetchBucketsBySyntheticPackageFingerprint[key]
+        } ?: error("Swift resolve bucket is missing for package hash $key")
+
         bucket.completion.await()
         bucket.failure?.let {
             throw GradleException("Shared SwiftPM xcodebuild dump failed for bucket '${bucket}'", it)
         }
     }
-
-    fun findSwiftResolveBucket(packageHash: String): SwiftResolveBucket? =
-        synchronized(stateLock) {
-            fetchBucketsBySyntheticPackageFingerprint[packageHash]
-        }
-
-    fun findPackageGenerationBucket(packageHash: String): GeneratePackageBucket? =
-        synchronized(stateLock) {
-            generatePackageBucketBySyntheticPackageFingerprint[packageHash]
-        }
 
     companion object {
         private const val SERVICE_NAME = "SwiftImportFingerprintedCoordinationService"
@@ -250,10 +243,18 @@ internal abstract class SwiftImportFingerprintedCoordinationService : BuildServi
     }
 }
 
-private data class XcodeDumpBucketMapKey(
+internal data class XcodeDumpBucketMapKey(
     val xcodebuildFingerprint: String,
     val xcodebuildSdk: String,
-)
+) : java.io.Serializable
+
+internal data class SwiftResolveBucketMapKey(
+    val value: String
+) : java.io.Serializable
+
+internal data class GeneratePackageBucketMapKey(
+    val value: String
+) : java.io.Serializable
 
 internal open class CoordinationBucket(
     val completion: CountDownLatch = CountDownLatch(1),
@@ -262,6 +263,7 @@ internal open class CoordinationBucket(
 )
 
 internal class XcodeDumpBucket(
+    val key: XcodeDumpBucketMapKey,
     val ownerDumpDir: File,
     val ownerDerivedDataDir: File,
     completion: CountDownLatch = CountDownLatch(1),
@@ -269,6 +271,7 @@ internal class XcodeDumpBucket(
 
 internal class SwiftResolveBucket(
     // these first two are already markers for swift package resolve
+    val key: SwiftResolveBucketMapKey,
     val ownerPackageResolvedFile: File,
     val ownerWorkspaceStateFile: File,
     val ownerSwiftPMDependenciesCheckout: File,
@@ -288,7 +291,7 @@ internal class GeneratePackageBucket(
  * [Existing] means another task or a previous invocation already owns reusable outputs, so the caller waits and
  * writes its local location marker to those shared outputs.
  */
-internal sealed class CoordinationClaim<out T : CoordinationBucket> {
+internal sealed class CoordinationClaim<out T : CoordinationBucket> : java.io.Serializable {
     abstract val bucket: T
 
     data class Owner<T : CoordinationBucket>(

@@ -20,13 +20,19 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.XcodebuildDefFil
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.XcodebuildDefFileUtils.KOTLIN_LD_ARGS_DUMP_FILE_ENV
 import org.jetbrains.kotlin.gradle.utils.getFile
 import java.io.File
-import java.nio.file.Path
 import javax.inject.Inject
-import kotlin.io.path.createDirectories
-import kotlin.io.path.createFile
-import kotlin.io.path.deleteExisting
-import kotlin.io.path.exists
-import kotlin.io.path.writeText
+
+internal interface XcodebuildAwaitArgsDumpWorkParameters : WorkParameters {
+    val fingerprintCoordinationService: Property<SwiftImportFingerprintedCoordinationService>
+    val key: Property<XcodeDumpBucketMapKey>
+}
+
+// We await xcodebuilds in a work action on purpose, so that we don't block other tasks within the project from running in parallel.
+internal abstract class XcodebuildArgsDumpAwaitWorkAction : WorkAction<XcodebuildAwaitArgsDumpWorkParameters> {
+    override fun execute() {
+        parameters.fingerprintCoordinationService.get().awaitXcodeDump(parameters.key.get())
+    }
+}
 
 internal interface XcodebuildArgsDumpWorkParameters : WorkParameters {
     val xcodebuildPlatform: Property<String>
@@ -46,10 +52,11 @@ internal interface XcodebuildArgsDumpWorkParameters : WorkParameters {
     val dumpedXcodeBuildArgsDir: DirectoryProperty
     val additionalXcodeArgs: ListProperty<String>
     val fingerprintCoordinationService: Property<SwiftImportFingerprintedCoordinationService>
-    val xcodebuildExecutionFingerprint: Property<String>
-    val markCompletion: Property<Boolean>
+    val xcodebuildExecutionFingerprint: Property<XcodeDumpBucketMapKey>
+    val coordinationEnabled: Property<Boolean>
     val ideaSyncEnabled: Property<Boolean>
     val errorFile: RegularFileProperty
+    val xcodebuildFinishedMarkerFile: Property<File>
 }
 
 /**
@@ -68,17 +75,16 @@ internal abstract class XcodebuildArgsDumpWorkAction @Inject constructor(
         errorFile.delete()
         try {
             doExecute()
-            if (parameters.markCompletion.get()) {
+            parameters.xcodebuildFinishedMarkerFile.get().writeText(System.currentTimeMillis().toString())
+            if (parameters.coordinationEnabled.get()) {
                 parameters.fingerprintCoordinationService.get().markXcodeDumpCompleted(
-                    xcodebuildExecutionHash = parameters.xcodebuildExecutionFingerprint.get(),
-                    xcodebuildSdk = parameters.xcodebuildSdk.get(),
+                    key = parameters.xcodebuildExecutionFingerprint.get(),
                 )
             }
         } catch (failure: Throwable) {
-            if (parameters.markCompletion.get()) {
+            if (parameters.coordinationEnabled.get()) {
                 parameters.fingerprintCoordinationService.get().markXcodeDumpFailed(
-                    xcodebuildExecutionHash = parameters.xcodebuildExecutionFingerprint.get(),
-                    xcodebuildSdk = parameters.xcodebuildSdk.get(),
+                    key = parameters.xcodebuildExecutionFingerprint.get(),
                     failure = failure,
                 )
             }
@@ -130,7 +136,6 @@ internal abstract class XcodebuildArgsDumpWorkAction @Inject constructor(
         ldArgsDumpScript: File,
         ldArgsDump: File,
     ) {
-        val sdk = parameters.xcodebuildSdk.get()
         val targetArchitectures = architectures.map { it.xcodebuildArch }
         val projectRoot = parameters.syntheticImportProjectRoot.get()
 
@@ -138,7 +143,7 @@ internal abstract class XcodebuildArgsDumpWorkAction @Inject constructor(
          * DerivedData must be SDK-specific because Gradle can run iphoneos and iphonesimulator dump tasks in parallel.
          * Sharing one DerivedData directory across destinations makes xcodebuild race on its internal build database.
          */
-        val dd = parameters.syntheticImportDd.getFile().resolve("dd_$sdk")
+        val dd = parameters.syntheticImportDd.getFile()
 
         // FIXME: KT-84809 - This is not great, but we can't remove entire DD on incremental runs.
         // We delete only the synthetic dylib target intermediates to force xcodebuild to call the wrapper scripts again.

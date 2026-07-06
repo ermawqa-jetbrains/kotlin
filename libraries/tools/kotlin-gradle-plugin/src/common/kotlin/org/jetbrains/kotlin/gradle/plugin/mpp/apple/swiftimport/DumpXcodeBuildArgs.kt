@@ -66,9 +66,7 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
     val additionalXcodeArgs: ListProperty<String> = project.objects.listProperty(String::class.java).convention(emptyList())
 
     /** Checkout path passed to xcodebuild when this task owns the shared dump. */
-    @get:InputFiles
-    @get:Optional
-    @get:PathSensitive(PathSensitivity.NONE)
+    @get:Internal
     abstract val syntheticPackageFingerprint: RegularFileProperty
 
     @get:Inject
@@ -116,10 +114,40 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
      */
     @get:OutputFile
     val ideImportError: Provider<RegularFile> = syntheticImportDd.map {
-        it.file("DumpXcodebuild_error.out")
+        it.file("DumpXcodebuild_error_${xcodebuildSdk.get()}.out")
     }
 
+    private var _xcodebuildClaim: CoordinationClaim<XcodeDumpBucket>? = null
+    private fun xcodebuildClaim(): CoordinationClaim<XcodeDumpBucket> {
+        if (_xcodebuildClaim != null) { return _xcodebuildClaim!! }
+        _xcodebuildClaim = fingerprintCoordinationService.get().claimOrJoinXcodeDump(
+            xcodebuildExecutionHash = readXcodebuildFingerprint(),
+            xcodebuildSdk = xcodebuildSdk.get(),
+        )
+        return _xcodebuildClaim!!
+    }
+
+    private val xcodebuildFinishedMarkerFile: File
+        get() {
+            val markerName = "xcodebuildFinishedMarker"
+            if (isCoordinationDisabled()) {
+                return localDerivedDataDir().resolve(markerName)
+            } else {
+                return xcodebuildClaim().bucket.ownerDerivedDataDir.resolve(markerName)
+            }
+        }
+
+    private fun readXcodebuildFingerprint() = xcodebuildFingerprint.asFile.get().readText().trim()
+    private fun localDerivedDataDir() = syntheticImportDd.get().asFile.resolve("dd_${xcodebuildSdk.get()}")
+
+    @Suppress("SENSELESS_COMPARISON")
+    private fun isCoordinationDisabled() = xcodebuildFingerprint.asFile.orNull == null || syntheticPackageFingerprint.asFile.orNull == null
+
+    // ./gradlew clean
     init {
+        outputs.upToDateWhen {
+            xcodebuildFinishedMarkerFile.exists()
+        }
         // KT-85468: while the error marker exists the task is not up-to-date so the next build retries.
         outputs.upToDateWhen { !ideImportError.get().asFile.exists() }
     }
@@ -129,29 +157,25 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
         val errorFile = ideImportError.get().asFile
         errorFile.delete()
 
-        val xcodebuildFingerprintFile = xcodebuildFingerprint.asFile.orNull
-        val syntheticPackageFingerprintFile = syntheticPackageFingerprint.asFile.orNull
         // this is the case when package sync strategy is set to PackageResolvedSynchronization.None
-        if (xcodebuildFingerprintFile == null || syntheticPackageFingerprintFile == null) {
+        if (isCoordinationDisabled()) {
             submitXcodebuildArgsDumpWorkAction(
                 dumpDir = syntheticDumpDir.get().asFile,
-                derivedDataDir = syntheticImportDd.get().asFile,
+                derivedDataDir = syntheticImportDd.get().asFile.resolve("dd_${xcodebuildSdk.get()}"),
                 syntheticImportProjectRoot = syntheticImportProjectRoot.get().asFile,
                 swiftPMDependenciesCheckout = swiftPMDependenciesCheckout.get().asFile,
+                xcodebuildExecutionHash = null,
             )
             return
         }
 
+        val syntheticPackageFingerprintFile = syntheticPackageFingerprint.asFile.get()
+
         val coordinationService = fingerprintCoordinationService.get()
 
         val syntheticPackageFingerprint = syntheticPackageFingerprintFile.readText().trim()
-        val xcodebuildExecutionFingerprint = xcodebuildFingerprintFile.readText().trim()
 
-        val claim = coordinationService.claimOrJoinXcodeDump(
-            xcodebuildExecutionHash = xcodebuildExecutionFingerprint,
-            xcodebuildSdk = xcodebuildSdk.get(),
-        )
-
+        val claim = xcodebuildClaim()
         when (claim) {
             is CoordinationClaim.Owner -> {
                 runOwnerXcodeDump(
@@ -159,12 +183,17 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
                     derivedDataDir = claim.bucket.ownerDerivedDataDir,
                     syntheticImportProjectRoot = coordinationService.sharedPackageGenerationRoot(syntheticPackageFingerprint),
                     swiftPMDependenciesCheckout = coordinationService.sharedCheckoutDir(syntheticPackageFingerprint),
-                    xcodebuildExecutionHash = xcodebuildExecutionFingerprint,
+                    xcodebuildExecutionHash = claim.bucket.key,
                 )
             }
 
             is CoordinationClaim.Existing -> {
-                coordinationService.awaitXcodeDump(claim.bucket)
+                workerExecutor.noIsolation().submit(
+                    XcodebuildArgsDumpAwaitWorkAction::class.java
+                ) {
+                    it.fingerprintCoordinationService.set(fingerprintCoordinationService)
+                    it.key.set(claim.bucket.key)
+                }
             }
         }
     }
@@ -174,7 +203,7 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
         derivedDataDir: File,
         syntheticImportProjectRoot: File,
         swiftPMDependenciesCheckout: File,
-        xcodebuildExecutionHash: String,
+        xcodebuildExecutionHash: XcodeDumpBucketMapKey,
     ) {
         submitXcodebuildArgsDumpWorkAction(
             dumpDir = dumpDir,
@@ -182,7 +211,6 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
             syntheticImportProjectRoot = syntheticImportProjectRoot,
             swiftPMDependenciesCheckout = swiftPMDependenciesCheckout,
             xcodebuildExecutionHash = xcodebuildExecutionHash,
-            markCompletion = true,
         )
     }
 
@@ -191,9 +219,9 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
         derivedDataDir: File,
         syntheticImportProjectRoot: File,
         swiftPMDependenciesCheckout: File,
-        xcodebuildExecutionHash: String? = null,
-        markCompletion: Boolean = false,
+        xcodebuildExecutionHash: XcodeDumpBucketMapKey?,
     ) {
+        val isCoordinationEnabled = xcodebuildExecutionHash != null
         workerExecutor.noIsolation().submit(XcodebuildArgsDumpWorkAction::class.java) { params ->
             params.xcodebuildPlatform.set(xcodebuildPlatform)
             params.xcodebuildSdk.set(xcodebuildSdk)
@@ -203,11 +231,12 @@ internal abstract class DumpXcodeBuildArgs : DefaultTask() {
             params.syntheticImportDd.fileValue(derivedDataDir)
             params.dumpedXcodeBuildArgsDir.fileValue(dumpDir)
             params.additionalXcodeArgs.set(additionalXcodeArgs)
-            params.markCompletion.set(markCompletion)
+            params.coordinationEnabled.set(isCoordinationEnabled)
             params.ideaSyncEnabled.set(ideaSyncEnabled)
             params.errorFile.set(ideImportError)
+            params.xcodebuildFinishedMarkerFile.set(xcodebuildFinishedMarkerFile)
 
-            if (markCompletion) {
+            if (isCoordinationEnabled) {
                 params.fingerprintCoordinationService.set(fingerprintCoordinationService)
                 params.xcodebuildExecutionFingerprint.set(xcodebuildExecutionHash!!)
             }

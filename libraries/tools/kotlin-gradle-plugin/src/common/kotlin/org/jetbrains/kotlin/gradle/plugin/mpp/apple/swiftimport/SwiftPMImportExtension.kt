@@ -525,7 +525,7 @@ sealed class PackageResolvedSynchronization : Serializable {
     }
 }
 
-internal fun PackageResolvedSynchronization.toSerializable(): SerializablePackageResolvedSynchronization = when (this) {
+internal fun PackageResolvedSynchronization.toKotlinxSerializable(): SerializablePackageResolvedSynchronization = when (this) {
     is PackageResolvedSynchronization.Identifier -> SerializablePackageResolvedSynchronization.Identifier(identifier)
     PackageResolvedSynchronization.None -> SerializablePackageResolvedSynchronization.None
 }

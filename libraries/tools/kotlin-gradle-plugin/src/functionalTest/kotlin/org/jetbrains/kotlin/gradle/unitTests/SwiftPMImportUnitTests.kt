@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.FetchSyntheticIm
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.FingerprintSyntheticPackage
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.GenerateSyntheticLinkageImportProject
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.FingerprintXcodeBuild
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SerializeSwiftPMDependenciesMetadataForLockFiles
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMImportExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.SwiftPMDependency
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.swiftimport.ValidateLocalSwiftPMDependencies
@@ -606,6 +607,82 @@ class SwiftPMImportUnitTests {
         assertEquals(
             setOf(),
             staticFrameworkTaskDependencies - dynamicFrameworkTaskDependencies,
+        )
+    }
+
+    @Test
+    fun `swiftPM interproject metadata task dependencies - lock serialization depends on regular metadata and root depends on serialization for locks` () {
+        val rootProject = buildProjectWithMPP {
+            kotlin {
+                iosSimulatorArm64()
+
+                swiftPMDependencies {
+                    swiftPackage("foo", "1.0.0", listOf())
+                }
+            }
+        }.evaluate()
+
+        buildProjectWithMPP(
+            projectBuilder = {
+                withParent(rootProject)
+                withName("subprojectTransitive")
+            }
+        ) {
+            kotlin {
+                iosSimulatorArm64()
+
+                swiftPMDependencies {
+                    swiftPackage("foo", "1.0.0", listOf())
+                }
+            }
+        }.evaluate()
+
+        val subprojectDirect = buildProjectWithMPP(
+            projectBuilder = {
+                withName("subprojectDirect")
+                withParent(rootProject)
+            }
+        ) {
+            kotlin {
+                iosSimulatorArm64()
+                swiftPMDependencies {
+                    swiftPackage("foo", "1.0.0", listOf())
+                }
+
+                sourceSets.commonMain.dependencies {
+                    implementation(project(":subprojectTransitive"))
+                }
+            }
+        }.evaluate()
+
+        buildProjectWithMPP(
+            projectBuilder = {
+                withName("subprojectUnrelated")
+                withParent(rootProject)
+            }
+        ) {
+            kotlin {
+                iosSimulatorArm64()
+            }
+        }.evaluate()
+
+        // Subproject's direct serialization for umbrella should a dependency on regular serialize metadata task because it has a dependency on subproject transitive
+        assertEquals(
+            setOf(":subprojectTransitive:serializeSwiftPMDependenciesMetadata"),
+            subprojectDirect.tasks.withType(SerializeSwiftPMDependenciesMetadataForLockFiles::class.java)
+                .single().taskDependencies.getDependencies(null).map { it.path }.toSet(),
+        )
+
+        // Then umbrella task should be in the root and should depend on everyone
+        assertEquals(
+            setOf(
+                ":serializeSwiftPMDependenciesMetadataForLockFiles",
+                ":subprojectTransitive:serializeSwiftPMDependenciesMetadataForLockFiles",
+                ":subprojectDirect:serializeSwiftPMDependenciesMetadataForLockFiles",
+                ":subprojectUnrelated:serializeSwiftPMDependenciesMetadataForLockFiles",
+            ),
+            rootProject.tasks.withType(GenerateSyntheticLinkageImportProject::class.java)
+                .single { "Umbrella" in it.name }.taskDependencies.getDependencies(null).map { it.path }.toSet(),
         )
     }
 
