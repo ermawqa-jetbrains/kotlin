@@ -101,9 +101,12 @@ object StandaloneProjectFactory {
                 return object : MockProject(parent, parentDisposable) {
                     @Suppress("UnstableApiUsage")
                     override fun createListener(descriptor: PluginListenerDescriptor): Any {
-                        val listenerClass = loadClass<Any>(descriptor.listenerClassName, descriptor.pluginDescriptor)
-                        val listener = listenerClass.getDeclaredConstructor(Project::class.java).newInstance(this)
-                        return listener
+                        return try {
+                            val listenerClass = loadClass<Any>(descriptor.listenerClassName, descriptor.pluginDescriptor)
+                            listenerClass.getDeclaredConstructor(Project::class.java).newInstance(this)
+                        } catch (_: NoClassDefFoundError) {
+                            super.createListener(descriptor)
+                        }
                     }
                 }
             }
