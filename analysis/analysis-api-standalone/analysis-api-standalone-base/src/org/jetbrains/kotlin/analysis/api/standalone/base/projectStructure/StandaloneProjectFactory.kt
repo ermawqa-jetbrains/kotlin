@@ -105,7 +105,7 @@ object StandaloneProjectFactory {
                             val listenerClass = loadClass<Any>(descriptor.listenerClassName, descriptor.pluginDescriptor)
                             listenerClass.getDeclaredConstructor(Project::class.java).newInstance(this)
                         } catch (_: NoClassDefFoundError) {
-                            super.createListener(descriptor)
+                            ""
                         }
                     }
                 }
