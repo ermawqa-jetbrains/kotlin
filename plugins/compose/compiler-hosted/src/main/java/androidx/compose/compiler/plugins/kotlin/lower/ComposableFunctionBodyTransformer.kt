@@ -385,8 +385,9 @@ class ComposableFunctionBodyTransformer(
     private val traceMarkersEnabled: Boolean,
     targetRuntimeVersion: ComposeRuntimeVersion?,
     featureFlags: FeatureFlags,
+    irModule: IrModuleFragment,
 ) :
-    AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags),
+    AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags, irModule),
     FileLoweringPass,
     ModuleLoweringPass {
 

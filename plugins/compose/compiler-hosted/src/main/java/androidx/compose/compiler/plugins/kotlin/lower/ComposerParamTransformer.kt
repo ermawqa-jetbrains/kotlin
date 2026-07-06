@@ -57,7 +57,8 @@ class ComposerParamTransformer(
     stabilityInferencer: StabilityInferencer,
     metrics: ModuleMetrics,
     featureFlags: FeatureFlags,
-) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags),
+    irModule: IrModuleFragment,
+) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags, irModule),
     ModuleLoweringPass {
 
     private var inlineLambdaInfo = ComposeInlineLambdaLocator(context)

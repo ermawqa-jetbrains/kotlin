@@ -80,6 +80,7 @@ class ComposeIrGenerationExtension(
                 metrics,
                 stabilityInferencer,
                 featureFlags,
+                moduleFragment,
             ).lower(moduleFragment)
         }
 
@@ -89,6 +90,7 @@ class ComposeIrGenerationExtension(
             stabilityInferencer,
             featureFlags,
             pluginContext.diagnosticReporter,
+            moduleFragment,
         ).lower(moduleFragment)
 
         ProgressManager.checkCanceled()
@@ -102,6 +104,7 @@ class ComposeIrGenerationExtension(
                 metrics = metrics,
                 stabilityInferencer = stabilityInferencer,
                 featureFlags = featureFlags,
+                irModule = moduleFragment,
             ).lower(moduleFragment)
         }
 
@@ -114,6 +117,7 @@ class ComposeIrGenerationExtension(
             metrics,
             stabilityInferencer,
             featureFlags,
+            moduleFragment,
         )
 
         functionKeyTransformer.lower(moduleFragment)
@@ -129,7 +133,8 @@ class ComposeIrGenerationExtension(
             pluginContext,
             metrics,
             stabilityInferencer,
-            featureFlags
+            featureFlags,
+            moduleFragment,
         ).lower(moduleFragment)
 
         ProgressManager.checkCanceled()
@@ -143,6 +148,7 @@ class ComposeIrGenerationExtension(
             metrics,
             stabilityInferencer,
             featureFlags,
+            moduleFragment,
         ).lower(moduleFragment)
 
         ProgressManager.checkCanceled()
@@ -153,6 +159,7 @@ class ComposeIrGenerationExtension(
             metrics,
             stabilityInferencer,
             featureFlags,
+            moduleFragment,
         ).lower(moduleFragment)
 
         ProgressManager.checkCanceled()
@@ -165,6 +172,7 @@ class ComposeIrGenerationExtension(
             stabilityInferencer,
             metrics,
             featureFlags,
+            moduleFragment,
         ).lower(moduleFragment)
 
         ProgressManager.checkCanceled()
@@ -174,6 +182,7 @@ class ComposeIrGenerationExtension(
             metrics,
             stabilityInferencer,
             featureFlags,
+            moduleFragment,
         ).lower(moduleFragment)
 
         // transform calls to the currentComposer to just use the local parameter from the
@@ -190,6 +199,7 @@ class ComposeIrGenerationExtension(
             traceMarkersEnabled,
             targetRuntimeVersion,
             featureFlags,
+            moduleFragment,
         ).lower(moduleFragment)
 
         ComposableAnnotationRemover().lower(moduleFragment)
@@ -200,6 +210,7 @@ class ComposeIrGenerationExtension(
                 metrics,
                 stabilityInferencer,
                 featureFlags,
+                moduleFragment,
             ).lower(moduleFragment)
         }
 
@@ -209,6 +220,7 @@ class ComposeIrGenerationExtension(
                 metrics,
                 stabilityInferencer,
                 featureFlags,
+                moduleFragment,
             ).lower(moduleFragment)
         }
 

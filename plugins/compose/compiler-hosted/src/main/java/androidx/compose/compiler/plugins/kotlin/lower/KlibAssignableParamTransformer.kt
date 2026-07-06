@@ -65,11 +65,13 @@ class KlibAssignableParamTransformer(
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
     featureFlags: FeatureFlags,
+    irModule: IrModuleFragment,
 ) : AbstractComposeLowering(
     context,
     metrics,
     stabilityInferencer,
-    featureFlags
+    featureFlags,
+    irModule,
 ), ModuleLoweringPass {
     override fun lower(irModule: IrModuleFragment) {
         irModule.transformChildrenVoid(this)

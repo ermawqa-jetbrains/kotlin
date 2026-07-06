@@ -71,7 +71,8 @@ abstract class AbstractLiveLiteralTransformTests : AbstractIrTransformTest() {
                                         )
                                     },
                                     stabilityInferencer,
-                                    featureFlags
+                                    featureFlags,
+                                    moduleFragment,
                                 ) {
                                     override fun makeKeySet(): MutableSet<String> {
                                         return super.makeKeySet().also { builtKeys = it }

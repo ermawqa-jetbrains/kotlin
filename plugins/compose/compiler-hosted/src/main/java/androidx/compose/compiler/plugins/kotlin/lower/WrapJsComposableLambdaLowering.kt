@@ -85,11 +85,13 @@ class WrapJsComposableLambdaLowering(
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
     featureFlags: FeatureFlags,
+    irModule: IrModuleFragment,
 ) : AbstractComposeLowering(
     context,
     metrics,
     stabilityInferencer,
     featureFlags,
+    irModule,
 ) {
     private fun IrValueParameter.isArtificialComposeParameter(): Boolean =
         when {
@@ -101,7 +103,7 @@ class WrapJsComposableLambdaLowering(
 
     private val rememberFunSymbol by lazy {
         val composerParamTransformer = ComposerParamTransformer(
-            context, stabilityInferencer, metrics, featureFlags
+            context, stabilityInferencer, metrics, featureFlags, irModule
         )
         getTopLevelFunctions(ComposeCallableIds.remember)
             .map {

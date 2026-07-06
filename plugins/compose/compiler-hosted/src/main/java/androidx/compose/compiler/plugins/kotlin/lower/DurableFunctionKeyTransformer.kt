@@ -88,12 +88,14 @@ class DurableFunctionKeyTransformer(
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
     featureFlags: FeatureFlags,
+    irModule: IrModuleFragment,
 ) : DurableKeyTransformer(
     DurableKeyVisitor(),
     context,
     stabilityInferencer,
     metrics,
     featureFlags,
+    irModule,
 ) {
 
     fun realizeKeyMetaAnnotations(moduleFragment: IrModuleFragment) {

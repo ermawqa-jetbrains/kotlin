@@ -49,11 +49,13 @@ class AddHiddenFromObjCLowering(
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
     featureFlags: FeatureFlags,
+    irModule: IrModuleFragment,
 ) : AbstractComposeLowering(
     pluginContext,
     metrics,
     stabilityInferencer,
-    featureFlags
+    featureFlags,
+    irModule,
 ) {
 
     private val hiddenFromObjCAnnotation: IrClassSymbol by lazy {

@@ -102,7 +102,8 @@ open class LiveLiteralTransformer(
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
     featureFlags: FeatureFlags,
-) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags),
+    irModule: IrModuleFragment,
+) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags, irModule),
     ModuleLoweringPass {
 
     override fun lower(irModule: IrModuleFragment) {

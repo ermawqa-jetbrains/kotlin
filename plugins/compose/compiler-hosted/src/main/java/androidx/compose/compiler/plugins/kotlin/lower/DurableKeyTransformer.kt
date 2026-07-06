@@ -46,7 +46,8 @@ open class DurableKeyTransformer(
     stabilityInferencer: StabilityInferencer,
     metrics: ModuleMetrics,
     featureFlags: FeatureFlags,
-) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags),
+    irModule: IrModuleFragment,
+) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags, irModule),
     ModuleLoweringPass {
 
     override fun lower(irModule: IrModuleFragment) {

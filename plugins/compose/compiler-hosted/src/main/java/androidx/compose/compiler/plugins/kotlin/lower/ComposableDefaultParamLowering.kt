@@ -87,7 +87,8 @@ class ComposableDefaultParamLowering(
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
     featureFlags: FeatureFlags,
-) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags) {
+    irModule: IrModuleFragment,
+) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags, irModule) {
     private val originalToTransformed = mutableMapOf<IrSimpleFunction, IrSimpleFunction>()
 
     override fun lower(irModule: IrModuleFragment) {

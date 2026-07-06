@@ -58,7 +58,8 @@ class ClassStabilityTransformer(
     stabilityInferencer: StabilityInferencer,
     featureFlags: FeatureFlags,
     private val reporter: IrDiagnosticReporter,
-) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags),
+    irModule: IrModuleFragment,
+) : AbstractComposeLowering(context, metrics, stabilityInferencer, featureFlags, irModule),
     ClassLoweringPass,
     ModuleLoweringPass {
 
