@@ -31,6 +31,7 @@ object NativeVolatileCheck : NativeKlibExpressionsChecker<IrCall> {
     private val typedIntrinsicAnnotation = FqName("kotlin.native.internal.TypedIntrinsic")
 
     fun IrFunctionAccessExpression.isVolatileIntrinsic(): Boolean {
+        if (!symbol.isBound) return false
         val owner = symbol.owner
         val annotation = owner.annotations.findAnnotation(typedIntrinsicAnnotation)
         val value = annotation?.getConstArgument<String>("kind") ?: return false
