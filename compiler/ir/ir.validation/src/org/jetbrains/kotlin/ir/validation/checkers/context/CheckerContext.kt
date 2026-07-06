@@ -38,20 +38,20 @@ class CheckerContext(
     fun error(element: IrElement, message: String) = error(element, checker, message)
 
     fun enterNewScopeWithTypeParameters(container: IrTypeParametersContainer) {
-        typeParameterScopeStack.enterNewScope(
+        typeParameterScopeStack.enterScope(
             outerScopesAreInvisible = container.shouldHaveOuterScopesVisible(),
             populateScope = { container.typeParameters.forEach { add(it.symbol) } },
         )
     }
 
     fun exitScopeWithTypeParameters(container: IrTypeParametersContainer) {
-        typeParameterScopeStack.exitNewScope(
+        typeParameterScopeStack.exitScope(
             outerScopesAreInvisible = container.shouldHaveOuterScopesVisible(),
         )
     }
 
     fun enterNewScopeForOwner(owner: IrElement, populateScope: MutableSet<IrValueSymbol>.() -> Unit = {}) {
-        valueSymbolScopeStack.enterNewScope(
+        valueSymbolScopeStack.enterScope(
             isGlobalScope = owner is IrScript,
             outerScopesAreInvisible = owner.shouldHaveOuterScopesVisible(),
             populateScope = populateScope
@@ -59,7 +59,7 @@ class CheckerContext(
     }
 
     fun exitScopeForOwner(owner: IrElement) {
-        valueSymbolScopeStack.exitNewScope(
+        valueSymbolScopeStack.exitScope(
             outerScopesAreInvisible = owner.shouldHaveOuterScopesVisible(),
         )
     }

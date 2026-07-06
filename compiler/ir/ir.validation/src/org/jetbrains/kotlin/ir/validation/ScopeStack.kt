@@ -25,7 +25,7 @@ class ScopeStack<E> {
      *   even for those nested scopes where [outerScopesAreInvisible] is `true`.
      * @param outerScopesAreInvisible Whether values of outer scopes are invisible in this new scope, except when an outer scope is global.
      */
-    fun enterNewScope(
+    fun enterScope(
         isGlobalScope: Boolean = false,
         outerScopesAreInvisible: Boolean = false,
         populateScope: MutableSet<E>.() -> Unit = {},
@@ -38,7 +38,7 @@ class ScopeStack<E> {
         }
     }
 
-    fun exitNewScope(outerScopesAreInvisible: Boolean = false) {
+    fun exitScope(outerScopesAreInvisible: Boolean = false) {
         if (outerScopesAreInvisible) {
             scopes.removeLast()
         } else {
