@@ -59,8 +59,8 @@ internal external fun Boxed_label__reverse_swift(self: kotlin.native.internal.Na
 @BindReverseBridgeToMethod(Boxed::class, "label")
 public fun Boxed_label__reverse(self: Boxed<kotlin.Any?>): kotlin.String {
     val __self = kotlin.native.internal.ref.createRetainedExternalRCRef(self)
-    val __result = Boxed_label__reverse_swift(__self)
-    return interpretObjCPointer<kotlin.String>(__result)
+    val _result = Boxed_label__reverse_swift(__self)
+    return interpretObjCPointer<kotlin.String>(_result)
 }
 
 @ImportedBridge("Boxed_unbox__reverse_swift")
@@ -69,8 +69,8 @@ internal external fun Boxed_unbox__reverse_swift(self: kotlin.native.internal.Na
 @BindReverseBridgeToMethod(Boxed::class, "unbox")
 public fun Boxed_unbox__reverse(self: Boxed<kotlin.Any?>): kotlin.Any? {
     val __self = kotlin.native.internal.ref.createRetainedExternalRCRef(self)
-    val __result = Boxed_unbox__reverse_swift(__self)
-    return if (__result == kotlin.native.internal.NativePtr.NULL) null else kotlin.native.internal.ref.dereferenceExternalRCRef(__result) as kotlin.Any
+    val _result = Boxed_unbox__reverse_swift(__self)
+    return if (_result == kotlin.native.internal.NativePtr.NULL) null else kotlin.native.internal.ref.dereferenceExternalRCRef(_result) as kotlin.Any
 }
 
 @ImportedBridge("Defaulter_describe__reverse_swift")
@@ -79,8 +79,8 @@ internal external fun Defaulter_describe__reverse_swift(self: kotlin.native.inte
 @BindReverseBridgeToMethod(Defaulter::class, "describe")
 public fun Defaulter_describe__reverse(self: Defaulter): kotlin.String {
     val __self = kotlin.native.internal.ref.createRetainedExternalRCRef(self)
-    val __result = Defaulter_describe__reverse_swift(__self)
-    return interpretObjCPointer<kotlin.String>(__result)
+    val _result = Defaulter_describe__reverse_swift(__self)
+    return interpretObjCPointer<kotlin.String>(_result)
 }
 
 @ImportedBridge("Defaulter_tag__reverse_swift")
@@ -89,8 +89,8 @@ internal external fun Defaulter_tag__reverse_swift(self: kotlin.native.internal.
 @BindReverseBridgeToMethod(Defaulter::class, "tag")
 public fun Defaulter_tag__reverse(self: Defaulter): kotlin.String {
     val __self = kotlin.native.internal.ref.createRetainedExternalRCRef(self)
-    val __result = Defaulter_tag__reverse_swift(__self)
-    return interpretObjCPointer<kotlin.String>(__result)
+    val _result = Defaulter_tag__reverse_swift(__self)
+    return interpretObjCPointer<kotlin.String>(_result)
 }
 
 @ImportedBridge("GreeterBase_greet__TypesOfArguments__Swift_String____reverse_swift")
