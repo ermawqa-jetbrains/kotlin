@@ -44,6 +44,10 @@ abstract class WasmICContextBase : PlatformDependentICContext {
     ): JsCommonBackendContext {
         //Hack - pre-load functional interfaces in case if IrLoader cut its count (KT-71039)
         //Restored after KT-78040
+        //`WasmAddFunctionSupertypeToSuspendFunctionLowering` of Kotlin/Wasm backend
+        //adds `Function<...>` supertypes that cannot be traced by Incremental Compilation.
+        //Without this hack, their definitions are not appeared, even if added as supertypes
+        //by the `WasmAddFunctionSupertypeToSuspendFunctionLowering`.
         repeat(25) {
             irBuiltIns.functionN(it)
             irBuiltIns.kFunctionN(it)
