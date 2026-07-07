@@ -844,7 +844,6 @@ private fun Candidate.isJavaApplicableCandidate(): Boolean {
 }
 
 internal object EagerResolveOfCallableReferences : ResolutionStage() {
-    @OptIn(OnlyForDefaultLanguageFeatureDisabled::class)
     context(sink: CheckerSink, context: ResolutionContext)
     override suspend fun check(candidate: Candidate) {
         if (candidate.postponedAtoms.isEmpty()) return
@@ -862,7 +861,7 @@ internal object EagerResolveOfCallableReferences : ResolutionStage() {
                     if (AbstractTypeChecker.RUN_SLOW_ASSERTIONS) check(atom in candidate.postponedAtoms)
 
                     sink.yieldDiagnostic(UnsuccessfulCallableReferenceArgument)
-                } else when (applicability) {
+                } else @OptIn(OnlyForDefaultLanguageFeatureDisabled::class) when (applicability) {
                     CandidateApplicability.RESOLVED_NEED_PRESERVE_COMPATIBILITY ->
                         sink.reportDiagnostic(LowerPriorityToPreserveCompatibilityDiagnostic)
                     CandidateApplicability.RESOLVED_LOW_PRIORITY ->

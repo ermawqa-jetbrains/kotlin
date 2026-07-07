@@ -171,7 +171,7 @@ object InvokeOnHiddenCompanionObject : ResolutionDiagnostic(HIDDEN)
 
 class InapplicableNullableReceiver(val actualType: ConeKotlinType) : ResolutionDiagnostic(UNSAFE_CALL)
 
-@OptIn(OnlyForDefaultLanguageFeatureDisabled::class)
+@OnlyForDefaultLanguageFeatureDisabled(LanguageFeature.DisableCompatibilityModeForNewInference, LanguageFeature.EnumEntries)
 object LowerPriorityToPreserveCompatibilityDiagnostic : ResolutionDiagnostic(RESOLVED_NEED_PRESERVE_COMPATIBILITY)
 
 object LowerPriorityForDynamic : ResolutionDiagnostic(RESOLVED_LOW_PRIORITY)
