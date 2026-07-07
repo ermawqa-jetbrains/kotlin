@@ -552,7 +552,7 @@ object FirJvmErrorsDefaultMessages : BaseDiagnosticRendererFactory() {
 
         map.put(
             INTERFACE_COMPANION_BLOCK_PROPERTY_PRIVATE_FIELD,
-            "Interface companion block property must either be 'const' or annotated with '@JvmField'."
+            "Interface companion block property must either by 'const' or must be annotated with '@JvmField'."
         )
     }
 }
