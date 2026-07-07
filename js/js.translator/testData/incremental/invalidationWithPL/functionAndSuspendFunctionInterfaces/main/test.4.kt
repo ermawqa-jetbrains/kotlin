@@ -28,6 +28,10 @@ fun test(stepId: Int, isWasm: Boolean): String {
             // linkage keeps a throwing stub for the missing declaration); only *invoking* it must fail.
             // The reference/cast are outside the try on purpose, so if they threw the test would fail.
             val ref3 = ::target3
+            check(ref3 is Function4<*, *, *, *, *>, "s5: ref3 is Function4")
+            check(ref3 is SuspendFunction3<*, *, *, *>, "s5: ref3 is SuspendFunction3")
+            check(ref3 is KFunction4<*, *, *, *, *>, "s5: ref3 is KFunction4")
+            check(ref3 is KSuspendFunction3<*, *, *, *>, "s5: ref3 is LSuspendFunction3")
             val f = ref3 as Function4<Int, Int, Int, Continuation<Int>, Any?>
             val f1 = ref3 as SuspendFunction3<Int, Int, Int, Int>
             return try {
