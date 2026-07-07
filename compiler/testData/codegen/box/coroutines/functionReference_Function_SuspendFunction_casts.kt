@@ -1,11 +1,12 @@
 // KT-66098: ClassCastException
 // KT-78040 K/Wasm: consider making implementations (!) of suspend lambdas a subtype of FunctionX interfaces
 
-// IGNORE_BACKEND: JS_IR_ES6
-// ^^^ KT-82349: ClassCastException
 // WITH_STDLIB
 // WITH_COROUTINES
 // WITH_REFLECT
+
+// IGNORE_BACKEND: JS_IR, JS_IR_ES6
+// ^^^ KT-35479 KT-82349: ClassCastException
 
 // IGNORE_KLIB_RUNTIME_ERRORS_WITH_CUSTOM_SECOND_STAGE: Native:2.3,2.4
 // ^^^ K/Native didn't generate KSuspendFunctionN <: KFunction{N + 1}
