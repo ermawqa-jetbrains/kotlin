@@ -16,8 +16,6 @@ interface I {
 
         <!PRIVATE_PROPERTY_IN_INTERFACE!>private<!> val private1 = 1
         <!PRIVATE_PROPERTY_IN_INTERFACE!>private<!> var private2 = 2
-        var private3 = 2
-            private set
     }
 }
 
