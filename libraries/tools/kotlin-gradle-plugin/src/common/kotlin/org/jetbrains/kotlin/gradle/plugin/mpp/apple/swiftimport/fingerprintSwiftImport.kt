@@ -44,7 +44,7 @@ internal abstract class FingerprintSyntheticPackage : DefaultTask() {
     @Serializable
     private class JsonFingerprintWrapper(
         val transitiveDependencies: TransitiveSwiftPMMetadata,
-        val directSwiftPMDependencies: SwiftPMImportMetadata
+        val directSwiftPMDependencies: SwiftPMImportMetadata,
     )
 
     /**
@@ -53,14 +53,15 @@ internal abstract class FingerprintSyntheticPackage : DefaultTask() {
      * so they are marked as @Internal, and this synthetic input is computed using Kotlinx serialization instead.
      */
     @get:Input
-    protected val dependencyGraphFingerprintInput: Provider<String> = transitiveSwiftPMMetadata.zip(directSwiftPMMetadata) { transitive, direct ->
-        json.encodeToString(
-            JsonFingerprintWrapper(
-                transitive,
-                direct,
+    protected val dependencyGraphFingerprintInput: Provider<String> =
+        transitiveSwiftPMMetadata.zip(directSwiftPMMetadata) { transitive, direct ->
+            json.encodeToString(
+                JsonFingerprintWrapper(
+                    transitive,
+                    direct,
+                )
             )
-        )
-    }
+        }
 
 
     /** Normalized Package.resolved synchronization mode. This is part of the diagnostic identifier/dependencies key. */
@@ -120,10 +121,12 @@ internal abstract class FingerprintXcodeBuild : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val syntheticPackageFingerprint: RegularFileProperty
 
+    private val layout = project.layout
+
     @get:OutputFile
     val xcodebuildFingerprint: Provider<RegularFile> =
         xcodebuildSdk.map { sdk ->
-            project.layout.buildDirectory.file(
+            layout.buildDirectory.file(
                 xcodebuildFingerprintPathForSdk(sdk)
             ).get()
         }

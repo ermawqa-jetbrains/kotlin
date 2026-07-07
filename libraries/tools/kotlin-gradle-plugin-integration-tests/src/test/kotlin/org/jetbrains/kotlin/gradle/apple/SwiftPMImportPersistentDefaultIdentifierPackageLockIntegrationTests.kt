@@ -673,7 +673,6 @@ class SwiftPMImportPersistentDefaultIdentifierPackageLockIntegrationTests : KGPB
                     // umbrella generate should be picked by shared
                     assertExactTasksInGraph(
                         ":$sharedProjectName:${SerializeSwiftPMDependenciesMetadataForLockFiles.TASK_NAME}",
-                        //":$sharedProjectName:${ValidateLocalSwiftPMDependencies.TASK_NAME}",
                         ":$sharedProjectName:${FingerprintSyntheticPackage.TASK_NAME}",
                         ":$sharedProjectName:${GenerateSyntheticLinkageImportProject.syntheticImportProjectGenerationTaskName}",
                         ":$sharedProjectName:$expectedSharedGenerateUmbrellaPackageTaskName",

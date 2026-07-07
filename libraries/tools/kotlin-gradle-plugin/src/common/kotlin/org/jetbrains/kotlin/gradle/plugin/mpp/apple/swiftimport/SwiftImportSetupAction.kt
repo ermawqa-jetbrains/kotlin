@@ -213,17 +213,18 @@ internal val SwiftImportSetupAction = KotlinProjectSetupAction {
             is PackageResolvedSynchronization.Identifier -> {
                 val packageResolvedSynchronizationIdentifier = packageIdentifier.identifier
                 project.launch {
+                    enableFingerprintCoordination(
+                        fingerprintCoordinationService = fingerprintCoordinationService,
+                        generateSyntheticPackageTask = syntheticImportProjectGenerationTaskForCinteropsAndLdDump,
+                        fingerprintSyntheticPackageTask = fingerprintSyntheticPackageTask,
+                        transitiveSwiftPMMetadataProvider = transitiveSwiftPMMetadataProvider,
+                        directSwiftPMMetadata = directSwiftPMMetadataProvider,
+                        fetchSyntheticImportProjectPackages = fetchSyntheticImportProjectPackages,
+                        syncPersistedPackageResolvedToSyntheticSwiftPMPackage = syncPersistedPackageResolvedToSyntheticSwiftPMPackage,
+                        syncSyntheticPackageResolvedToPersisted = syncSyntheticPackageResolvedToPersisted,
+                    )
+
                     if (multiplatformExtension.awaitTargets().any { it.supportsSwiftPMImport() }) {
-                        enableFingerprintCoordination(
-                            fingerprintCoordinationService = fingerprintCoordinationService,
-                            generateSyntheticPackageTask = syntheticImportProjectGenerationTaskForCinteropsAndLdDump,
-                            fingerprintSyntheticPackageTask = fingerprintSyntheticPackageTask,
-                            transitiveSwiftPMMetadataProvider = transitiveSwiftPMMetadataProvider,
-                            directSwiftPMMetadata = directSwiftPMMetadataProvider,
-                            fetchSyntheticImportProjectPackages = fetchSyntheticImportProjectPackages,
-                            syncPersistedPackageResolvedToSyntheticSwiftPMPackage = syncPersistedPackageResolvedToSyntheticSwiftPMPackage,
-                            syncSyntheticPackageResolvedToPersisted = syncSyntheticPackageResolvedToPersisted,
-                        )
 
                         val aggregationService = SwiftPMLockTaskAggregationBuildService.registerIfAbsent(project)
 
