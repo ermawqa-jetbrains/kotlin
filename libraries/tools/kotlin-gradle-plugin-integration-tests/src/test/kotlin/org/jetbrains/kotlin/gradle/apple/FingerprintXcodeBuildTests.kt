@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
 import org.junit.jupiter.api.condition.OS
 import java.nio.file.Path
 import kotlin.io.path.deleteExisting
+import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -205,18 +206,32 @@ class FingerprintXcodeBuildTests : KGPBaseTest() {
                     }
                 }
 
-                build(fingerprintXcodebuildIphoneSimulatorTask) {
+                build(":convertSyntheticImportProjectIntoDefFileIphonesimulator") {
                     assertTasksExecuted(fingerprintXcodebuildIphoneSimulatorTask)
                 }
-                val originalFingerprint = readIphonesimulatorFingerprint()
+                val originalXcodeBuildFingerprint = readIphonesimulatorFingerprint()
+                val originalPackageFingerprint = localPackageFingerprint().readText()
+                val lockFile = projectPath.resolve("build/kotlin/swiftSyntheticPackages/${originalPackageFingerprint.split("\n")[1]}/Package.resolved")
+                val originalLockFile = parsePackageResolved(lockFile.readText())
+                assertEquals(listOf("1.0.0"), originalLockFile.pins.map { it.state.version })
 
-                build(fingerprintXcodebuildIphoneSimulatorTask, "-P$useAlternateVersion=true") {
+                build(":convertSyntheticImportProjectIntoDefFileIphonesimulator", "-P$useAlternateVersion=true") {
                     assertTasksExecuted(fingerprintXcodebuildIphoneSimulatorTask)
+                    assertTasksExecuted(":dumpXcodebuildArgsIphonesimulator")
+                    assertTasksExecuted(":convertSyntheticImportProjectIntoDefFileIphonesimulator")
                 }
+
+                val finalLockFile = parsePackageResolved(lockFile.readText())
+                assertEquals(listOf("1.0.1"), finalLockFile.pins.map { it.state.version })
 
                 assertNotEquals(
-                    originalFingerprint,
+                    originalXcodeBuildFingerprint,
                     readIphonesimulatorFingerprint(),
+                    "Changing a remote SwiftPM dependency version should invalidate the prepare fingerprint task"
+                )
+                assertNotEquals(
+                    originalPackageFingerprint,
+                    localPackageFingerprint().readText(),
                     "Changing a remote SwiftPM dependency version should invalidate the prepare fingerprint task"
                 )
             }
