@@ -34,10 +34,20 @@ fun test(stepId: Int, isWasm: Boolean): String {
             check(ref3 is KSuspendFunction3<*, *, *, *>, "s5: ref3 is LSuspendFunction3")
             val f = ref3 as Function4<Int, Int, Int, Continuation<Int>, Any?>
             val f1 = ref3 as SuspendFunction3<Int, Int, Int, Int>
-            return try {
+
+            val resultInvokationAsFunction = try {
                 f(1, 2, 3, emptyCont)
+                "s5: expected the invocation as function of removed target3 to fail, but it returned normally"
+            } catch (e: Throwable) {
+                "OK"
+            }
+
+            if (resultInvokationAsFunction != "OK") {
+                return resultInvokationAsFunction
+            }
+            return try {
                 builder { f1(1, 2, 3) }
-                "s5: expected the invocation of removed target3 to fail, but it returned normally"
+                "s5: expected the invocation as suspend function of removed target3 to fail, but it returned normally"
             } catch (e: Throwable) {
                 "OK"
             }
